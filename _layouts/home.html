@@ -10,15 +10,23 @@ layout: default
 
 <!-- {%-include menu_item.html collection=site.data.menu.entries-%} -->
 
+<h2>一、项目经历</h2> 
+<ul>
+  {% assign posts = site.categories["个人项目经历"] %}
+  {% for post in posts | sort: 'title' %}
+    <li><a href="{{ post.url }}" style="color: blue;">{{ post.title }}</a></li>
+  {% endfor %}
+</ul>
 
-{% assign custom_cat_order = "个人项目经历,底层系统,AI算法,应用开发,算法竞赛" | split: "," %}
+
+<h2>二、技术笔记</h2> 
+{% assign custom_cat_order = "底层系统,AI算法,应用开发,算法竞赛" | split: "," %}
 
 {% for cat_name in custom_cat_order %}
   {% assign posts = site.categories[cat_name] %}
   {% if posts.size > 0 %}
     <h3>{{ cat_name }}</h3>
     <ul>
-      {% comment %} 文章按 标题(title) 正序排列 {% endcomment %}
       {% for post in posts | sort: 'title' %}
         <li><a href="{{ post.url }}" style="color: blue;">{{ post.title }}</a></li>
       {% endfor %}

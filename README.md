@@ -1,5 +1,9 @@
 # no style, please!
 
+编译 
+```bash
+bundle exec jekyll serve
+```
 
 
 [![Gem Version](https://badge.fury.io/rb/no-style-please.svg)](https://badge.fury.io/rb/no-style-please)
