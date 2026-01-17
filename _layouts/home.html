@@ -11,7 +11,7 @@ layout: default
 <!-- {%-include menu_item.html collection=site.data.menu.entries-%} -->
 
 
-{% assign custom_cat_order = "底层系统,AI算法,应用开发,编程竞赛" | split: "," %}
+{% assign custom_cat_order = "个人项目经历,底层系统,AI算法,应用开发,算法竞赛" | split: "," %}
 
 {% for cat_name in custom_cat_order %}
   {% assign posts = site.categories[cat_name] %}
