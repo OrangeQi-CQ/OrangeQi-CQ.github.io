@@ -1,12 +1,18 @@
-title: no style, please! # name of the site
-author: Riccardo Graziosi # name of site's author
-email: riccardo.graziosi97@gmail.com # email of site's author
-url: https://riggraz.dev # root address of the site
-baseurl: "/no-style-please" # subpath of the site, e.g. "/blog" (leave it blank "" if you're site shouldn't use a subpath)
+title: OrangeQi 的技术笔记
+author: 程琦 
+email: 2082448790@qq.com
+# url: https://riggraz.dev # root address of the site
+# baseurl: "/no-style-please" # subpath of the site, e.g. "/blog" (leave it blank "" if you're site shouldn't use a subpath)
 description: > # description of the site (multiple lines allowed)
-  A (nearly) no-CSS, fast, minimalist Jekyll theme.
+  C++, linux kernel, LLM
 
 permalink: /:slug.html
+
+markdown: kramdown
+kramdown:
+  input: GFM                
+  math_engine: mathjax      
+  syntax_highlighter: rouge 
 
 favicon: "logo.png" # name+extension of favicon (which must be put on the root folder)
 # goat_counter: "yoursitename" # put your GoatCounter name if you want to use GoatCounter analytics
