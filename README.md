@@ -1,5 +1,7 @@
 # no style, please!
 
+
+
 [![Gem Version](https://badge.fury.io/rb/no-style-please.svg)](https://badge.fury.io/rb/no-style-please)
 
 <img src="https://raw.githubusercontent.com/riggraz/no-style-please/master/logo.png" width="64" align="left" />A (nearly) no-CSS, fast, minimalist [Jekyll](https://jekyllrb.com/) theme.
