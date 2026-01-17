@@ -1,9 +1,8 @@
 ---
 layout:     post
-title:      "并发场景的内存安全：原子变量，锁，内存屏障"
+title:      "[Linux] 并发内存安全：atomic, mutex, memory_order"
 date:       2026-01-16
-tags:
-    - Linux 内核
+categories: 底层系统
 ---
 
 过去一个月的多场面试被问到 C++ 的原子变量和锁的底层原理。虽然大体知道怎么用，但是对底层原理还是根本不了解，于是下定决心整理一下这部分知识。
