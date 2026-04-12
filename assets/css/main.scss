@@ -2,3 +2,17 @@
 ---
 
 @import "no-style-please";
+
+// 统一链接颜色
+a {
+  color: #0056b3;
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+a:visited {
+  color: #0056b3;
+}

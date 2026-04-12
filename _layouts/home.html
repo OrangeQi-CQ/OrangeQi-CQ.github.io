@@ -3,35 +3,59 @@ layout: default
 ---
 <header>
   <h1>{{ site.title }}</h1>
-  {%-if site.theme_config.show_description-%}
+  {%- if site.theme_config.show_description -%}
     <p>{{ site.description }}</p>
-  {%-endif-%}
+  {%- endif -%}
 </header>
-
-<!-- {%-include menu_item.html collection=site.data.menu.entries-%} -->
-
-<h2>一、项目经历</h2> 
-<ul>
-  {% assign posts = site.categories["个人项目经历"] %}
-  {% for post in posts | sort: 'title' %}
-    <li><a href="{{ post.url }}" style="color: blue;">{{ post.title }}</a></li>
-  {% endfor %}
-</ul>
-
-
-<h2>二、技术笔记</h2> 
-{% assign custom_cat_order = "底层系统,AI算法,应用开发,算法竞赛" | split: "," %}
-
-{% for cat_name in custom_cat_order %}
-  {% assign posts = site.categories[cat_name] %}
-  {% if posts.size > 0 %}
-    <h3>{{ cat_name }}</h3>
-    <ul>
-      {% for post in posts | sort: 'title' %}
-        <li><a href="{{ post.url }}" style="color: blue;">{{ post.title }}</a></li>
-      {% endfor %}
-    </ul>
-  {% endif %}
-{% endfor %}
-
+<!-- {%- include menu_item.html collection=site.data.menu.entries -%} -->
+{%- assign dirs = '' | split: '' -%}
+{%- for post in site.posts -%}
+  {%- assign path = post.path | remove: '_posts/' -%}
+  {%- assign parts = path | split: '/' -%}
+  {%- assign dir_path = '' -%}
+  {%- for part in parts -%}
+    {%- if forloop.last -%}
+      {%- break -%}
+    {%- endif -%}
+    {%- assign dir_path = dir_path | append: part | append: '/' -%}
+    {%- unless dirs contains dir_path -%}
+      {%- assign dirs = dirs | push: dir_path -%}
+    {%- endunless -%}
+  {%- endfor -%}
+{%- endfor -%}
+{%- assign sorted_dirs = dirs | sort -%}
+{%- assign level_numbers = '' | split: '' -%}
+{%- assign prev_depth = -1 -%}
+{%- for dir in sorted_dirs -%}
+  {%- assign depth = dir | split: '/' | size | minus: 1 -%}
+  {%- assign dir_name = dir | split: '/' | last -%}
+  
+  {%- if depth > prev_depth -%}
+    {%- assign level_numbers = level_numbers | push: 0 -%}
+  {%- elsif depth < prev_depth -%}
+    {%- assign new_depth = depth | plus: 1 -%}
+    {%- assign level_numbers = level_numbers | slice: 0, new_depth -%}
+  {%- endif -%}
+  
+  {%- assign last_index = level_numbers.size | minus: 1 -%}
+  {%- assign current_number = level_numbers[last_index] | plus: 1 -%}
+  {%- assign level_numbers = level_numbers | slice: 0, last_index | push: current_number -%}
+  
+  {%- assign number_str = level_numbers | join: '.' -%}
+  
+  <h{{ depth | plus: 3 }} style="margin-left: {{ depth | times: 20 }}px; display: flex; align-items: center;">{{ number_str }}. {{ dir_name }}</h{{ depth | plus: 3 }}>
+  <ul style="margin-left: {{ depth | times: 20 | plus: 20 }}px;">
+    {%- for post in site.posts -%}
+      {%- assign post_path = post.path | remove: '_posts/' -%}
+      {%- if post_path contains dir -%}
+        {%- assign relative_path = post_path | remove: dir -%}
+        {%- unless relative_path contains '/' -%}
+          <li><a href="{{ post.url }}">{{ post.title }}</a></li>
+        {%- endunless -%}
+      {%- endif -%}
+    {%- endfor -%}
+  </ul>
+  
+  {%- assign prev_depth = depth -%}
+{%- endfor -%}
 {{ content }}
