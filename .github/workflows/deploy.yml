@@ -25,7 +25,14 @@ jobs:
 
       - uses: actions/setup-node@v6
         with:
-          node-version: 24
+          node-version: 22
+
+      - name: Set UTF-8 locale
+        run: |
+          sudo apt-get install -y locales
+          sudo locale-gen en_US.UTF-8
+          echo "LC_ALL=en_US.UTF-8" >> $GITHUB_ENV
+          echo "LANG=en_US.UTF-8" >> $GITHUB_ENV
 
       - name: Cache dependencies
         uses: actions/cache@v5
@@ -50,7 +57,7 @@ jobs:
         run: echo "Plugins are installed via npm ci"
 
       - name: Build Quartz
-        run: npx quartz build
+        run: npx quartz build -v
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
