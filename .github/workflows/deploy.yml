@@ -27,37 +27,30 @@ jobs:
         with:
           node-version: 22
 
-      - name: Set UTF-8 locale
+      - name: Setup git
         run: |
-          sudo apt-get install -y locales
-          sudo locale-gen en_US.UTF-8
-          echo "LC_ALL=en_US.UTF-8" >> $GITHUB_ENV
-          echo "LANG=en_US.UTF-8" >> $GITHUB_ENV
-
-      - name: Cache dependencies
-        uses: actions/cache@v5
-        with:
-          path: ~/.npm
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
-
-      - name: Cache Quartz plugins
-        uses: actions/cache@v5
-        with:
-          path: .quartz/plugins
-          key: ${{ runner.os }}-plugins-${{ hashFiles('quartz.lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-plugins-
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "github-actions[bot]"
 
       - name: Install Dependencies
         run: npm ci
 
-      - name: Install Quartz plugins
-        run: echo "Plugins are installed via npm ci"
-
       - name: Build Quartz
         run: npx quartz build -v
+
+      - name: Debug on failure
+        if: failure()
+        run: |
+          echo "=== Build failed diagnostics ==="
+          echo "Node: $(node --version)"
+          echo "NPM: $(npm --version)"
+          echo "PWD: $(pwd)"
+          echo "Content files:"
+          find content -type f -name "*.md" 2>/dev/null | head -30
+          echo "Public dir exists: $(test -d public && echo yes || echo no)"
+          if [ -d public ]; then
+            echo "Public files count: $(find public -type f | wc -l)"
+          fi
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
