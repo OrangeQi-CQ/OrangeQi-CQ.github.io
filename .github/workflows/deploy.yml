@@ -47,7 +47,7 @@ jobs:
         run: npm ci
 
       - name: Install Quartz plugins
-        run: npx quartz plugin install --from-config
+        run: echo "Plugins are installed via npm ci"
 
       - name: Build Quartz
         run: npx quartz build
