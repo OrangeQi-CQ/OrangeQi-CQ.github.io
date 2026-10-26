@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="给你一个链表数组，每个链表都已经按升序排列，将所有链表合并到一个升序链表中，返回合并后的链表。">
+  <meta name="note:title" content="leetcode 链表题整理">
+  <meta name="note:topic" content="algorithm-practice">
+  <meta name="note:date" content="2026-01-17">
+  <meta name="note:updated" content="2026-01-17">
+  <meta name="note:summary" content="给你一个链表数组，每个链表都已经按升序排列，将所有链表合并到一个升序链表中，返回合并后的链表。">
+  <meta name="note:tags" content="">
+  <meta name="note:path" content="计算机/算法竞赛/leetcode-链表题整理.html">
+
+  <title>leetcode 链表题整理 | OrangeQi 知识库</title>
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/assets/site.css">
+</head>
+<body class="article-page">
+  <header class="site-header">
+    <a class="brand" href="/" aria-label="OrangeQi 知识库首页"><span class="brand-mark" aria-hidden="true">O</span><span class="brand-name">OrangeQi <span>知识库</span></span></a>
+    <nav class="header-nav" aria-label="主导航"><a href="/">返回笔记库 <span aria-hidden="true">↗</span></a></nav>
+  </header>
+  <main class="note-page">
+    <nav class="note-breadcrumbs" aria-label="面包屑"><a href="/">笔记库</a><span>/</span><span>算法竞赛</span><span>/</span><span>leetcode 链表题整理</span></nav>
+    <header class="note-header"><p class="note-eyebrow">算法竞赛 / NOTE</p><h1>leetcode 链表题整理</h1><p class="note-deck">给你一个链表数组，每个链表都已经按升序排列，将所有链表合并到一个升序链表中，返回合并后的链表。</p><div class="note-byline"><span class="note-date-item">更新 <time datetime="2026-01-17">2026-01-17</time></span><span class="note-date-item">记录 <time datetime="2026-01-17">2026-01-17</time></span></div></header>
+    <article class="note-content"><h3 id="lc23-合并-k-个升序链表"><a href="https://leetcode.cn/problems/merge-k-sorted-lists/" class="external external-link">lc23. 合并 K 个升序链表</a></h3>
+
+
+    <p>给你一个链表数组，每个链表都已经按升序排列，将所有链表合并到一个升序链表中，返回合并后的链表。</p>
+
+
+    <p>思路就是用堆维护，归并。也可以分治，两两合并，合并  轮每轮 </p>
+
+
+    <figure data-rehype-pretty-code-figure=""><pre tabindex="0" data-language="cpp" data-theme="github-light github-dark"><code data-language="cpp" data-theme="github-light github-dark" style="display:grid;"><span data-line=""><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D;" data-token-type="comment">/**</span></span>
+<span data-line=""><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D;" data-token-type="comment"> * Definition for singly-linked list.</span></span>
+<span data-line=""><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D;" data-token-type="comment"> * struct ListNode {</span></span>
+<span data-line=""><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D;" data-token-type="comment"> *     int val;</span></span>
+<span data-line=""><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D;" data-token-type="comment"> *     ListNode *next;</span></span>
+<span data-line=""><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D;" data-token-type="comment"> *     ListNode() : val(0), next(nullptr) {}</span></span>
+<span data-line=""><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D;" data-token-type="comment"> *     ListNode(int x) : val(x), next(nullptr) {}</span></span>
+<span data-line=""><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D;" data-token-type="comment"> *     ListNode(int x, ListNode *next) : val(x), next(next) {}</span></span>
+<span data-line=""><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D;" data-token-type="comment"> * };</span></span>
+<span data-line=""><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D;" data-token-type="comment"> */</span></span>
+<span data-line=""> </span>
+<span data-line=""><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D;" data-token-type="comment"> // m个链表，总共 n 个元素，nlog(m)</span></span>
+<span data-line=""><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword">class</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="property"> Solution</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation"> {</span></span>
+<span data-line=""><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword">public:</span></span>
+<span data-line=""><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="property">    ListNode</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword">*</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function"> mergeKLists</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">(</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="property">vector</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">&lt;</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="property">ListNode</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="operator">*</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">&gt;</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword">&amp;</span><span style="--shiki-light:#E36209;--shiki-dark:#FFAB70;" data-token-type="important"> lists</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">) {</span></span>
+<span data-line=""><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword">        if</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation"> (lists.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function">empty</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">()) {</span></span>
+<span data-line=""><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword">            return</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="value"> nullptr</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">;</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">        }</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">        ListNode </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="operator">*</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">res </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="operator">=</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="value"> nullptr</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">, </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="operator">*</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">cur </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="operator">=</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="value"> nullptr</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">;</span></span>
+<span data-line=""><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword">        using</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="property"> Node</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="operator"> =</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function"> std</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">::</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="property">pair</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">&lt;</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword">int</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">, </span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="property">ListNode</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="operator">*</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">&gt;;</span></span>
+<span data-line=""><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function">        std</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">::priority_queue</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="operator">&lt;</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">Node, </span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function">std</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">::vector</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="operator">&lt;</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">Node</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="operator">&gt;</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">, </span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function">std</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">::greater</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="operator">&lt;&gt;&gt;</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation"> heap;</span></span>
+<span data-line=""><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword">        for</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation"> (</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword">const</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword"> auto</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="operator"> &amp;</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">it : lists) {</span></span>
+<span data-line=""><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword">            if</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation"> (it </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="operator">!=</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="value"> nullptr</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">) {</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal">                heap.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function">push</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">({it-&gt;val, it});</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">            }</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">        }</span></span>
+<span data-line=""><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword">        while</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation"> (</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="operator">!</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal">heap.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function">empty</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">()) {</span></span>
+<span data-line=""><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword">            auto</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation"> [val, ptr] </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="operator">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal"> heap.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function">top</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">();</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal">            heap.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function">pop</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">();</span></span>
+<span data-line=""><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword">            if</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation"> (res </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="operator">==</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="value"> nullptr</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">) {</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">                res </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="operator">=</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword"> new</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function"> ListNode</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">(val);</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">                cur </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="operator">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation"> res;</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">            } </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword">else</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation"> {</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal">                cur-&gt;next </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="operator">=</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword"> new</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function"> ListNode</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">(val);</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">                cur </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="operator">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal"> cur-&gt;next;</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">            }</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">            ptr </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="operator">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal"> ptr-&gt;next;</span></span>
+<span data-line=""><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword">            if</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation"> (ptr </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="operator">!=</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="value"> nullptr</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">) {</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal">                heap.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function">push</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">({ptr-&gt;val, ptr});</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">            }</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">        }</span></span>
+<span data-line=""><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword">        return</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation"> res;</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">    }</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">};</span></span></code></pre></figure>
+
+
+    <h3 id="lc141-环形链表"><a href="https://leetcode.cn/problems/linked-list-cycle" class="external external-link">lc141. 环形链表</a></h3>
+
+
+    <p>给链表判断是否有环，要求  空间。</p>
+
+
+    <p>思路是如果能走到 nullptr 肯定无环，如果链表长度为  且有环则必能在  步内访问相同节点。倍增枚举步数  内能否走回当前点。</p>
+
+
+    <p>也可以使用快慢指针。</p></article>
+    <div class="note-end"><a href="/">← 返回全部笔记</a><span>持续学习，持续整理。</span></div>
+  </main>
+</body>
+</html>

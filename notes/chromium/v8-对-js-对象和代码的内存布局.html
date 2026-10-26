@@ -1,0 +1,397 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="JavaScript 表面上是”一切皆对象”的动态语言，但 V8 为了达到接近静态语言的性能，在内存布局上做了大量工程优化。理解 V8 如何在堆上表示对象和代码，是理解 JS 性能模型的关键。">
+  <meta name="note:title" content="V8 对 JS 对象和代码的内存布局">
+  <meta name="note:topic" content="chromium">
+  <meta name="note:date" content="">
+  <meta name="note:updated" content="2026-10-25">
+  <meta name="note:summary" content="JavaScript 表面上是”一切皆对象”的动态语言，但 V8 为了达到接近静态语言的性能，在内存布局上做了大量工程优化。理解 V8 如何在堆上表示对象和代码，是理解 JS 性能模型的关键。">
+  <meta name="note:tags" content="V8, 浏览器, 引擎, 内存布局, JIT">
+  <meta name="note:path" content="计算机/浏览器/v8-对象与代码内存布局.html">
+  <meta name="note:featured" content="true">
+  <title>V8 对 JS 对象和代码的内存布局 | OrangeQi 知识库</title>
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/assets/site.css">
+</head>
+<body class="article-page">
+  <header class="site-header">
+    <a class="brand" href="/" aria-label="OrangeQi 知识库首页"><span class="brand-mark" aria-hidden="true">O</span><span class="brand-name">OrangeQi <span>知识库</span></span></a>
+    <nav class="header-nav" aria-label="主导航"><a href="/">返回笔记库 <span aria-hidden="true">↗</span></a></nav>
+  </header>
+  <main class="note-page">
+    <nav class="note-breadcrumbs" aria-label="面包屑"><a href="/">笔记库</a><span>/</span><span>Chromium 架构与内核</span><span>/</span><span>V8 对 JS 对象和代码的内存布局</span></nav>
+    <header class="note-header"><p class="note-eyebrow">Chromium 架构与内核 / NOTE</p><h1>V8 对 JS 对象和代码的内存布局</h1><p class="note-deck">JavaScript 表面上是”一切皆对象”的动态语言，但 V8 为了达到接近静态语言的性能，在内存布局上做了大量工程优化。理解 V8 如何在堆上表示对象和代码，是理解 JS 性能模型的关键。</p><div class="note-byline"><span class="note-date-item">更新 <time datetime="2026-10-25">2026-10-25</time></span><span class="note-date-item">记录 未注明</span><span class="note-header-tag">#V8</span><span class="note-header-tag">#浏览器</span><span class="note-header-tag">#引擎</span><span class="note-header-tag">#内存布局</span><span class="note-header-tag">#JIT</span></div></header>
+    <article class="note-content"><p>JavaScript 表面上是”一切皆对象”的动态语言，但 V8 为了达到接近静态语言的性能，在内存布局上做了大量工程优化。理解 V8 如何在堆上表示对象和代码，是理解 JS 性能模型的关键。</p>
+
+
+    <h2 id="1-核心设计思想">1. 核心设计思想</h2>
+
+
+    <p>V8 不把 JS 对象当成”哈希表/字典”来存储。它的核心思路是：</p>
+
+
+    <blockquote>
+<p><strong>把对象表示成紧凑的 struct，把”形状/类型”信息抽离出来共享，通过内联缓存让属性访问接近结构体字段访问的速度。</strong></p>
+</blockquote>
+
+
+    <p>这和 Python 的 dict 对象、Ruby 的 instance variable hash 完全不同——后者每个对象自带一个哈希表，而 V8 对象本身只是一块紧凑的内存，“它有哪些属性、叫什么名字”这些元信息放在单独的 <strong>Map（隐藏类）</strong> 里，由多个同形状对象共享。</p>
+
+
+    <h2 id="2-js-对象的内存布局">2. JS 对象的内存布局</h2>
+
+
+    <h3 id="21-基本结构">2.1 基本结构</h3>
+
+
+    <p>一个 V8 对象（<code>JSObject</code>）在堆上大致长这样：</p>
+
+
+    <pre><code>┌─────────────────────────┐  低地址
+│   Map 指针 (4/8 bytes)   │ ────→ 指向隐藏类（描述对象形状）
+├─────────────────────────┤
+│  Properties 指针        │ ────→ 命名属性的后备存储（慢属性）
+├─────────────────────────┤
+│  Elements 指针          │ ────→ 数字索引元素的后备存储（数组）
+├─────────────────────────┤
+│  In-object Slot 1       │  ← 内联属性值（直接存在对象体内）
+├─────────────────────────┤
+│  In-object Slot 2       │
+├─────────────────────────┤
+│  ...                    │
+└─────────────────────────┘  高地址
+</code></pre>
+
+
+    <p>关键三点：</p>
+
+
+    <ol>
+<li><strong>Map 指针</strong>：每个对象第一个槽位都指向它的”隐藏类”，描述这个对象的形状</li>
+<li><strong>内联属性（in-object properties）</strong>：常见的几个属性直接存在对象体内，按偏移量访问，速度最快</li>
+<li><strong>Properties / Elements 分离</strong>：命名属性和数字索引元素分开存储，优化数组访问</li>
+</ol>
+
+
+    <h3 id="22-为什么这样设计">2.2 为什么这样设计</h3>
+
+
+    <figure data-rehype-pretty-code-figure=""><pre tabindex="0" data-language="js" data-theme="github-light github-dark"><code data-language="js" data-theme="github-light github-dark" style="display:grid;"><span data-line=""><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword">const</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="value"> point</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="operator"> =</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation"> { x: </span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="value">10</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">, y: </span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="value">20</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation"> };</span></span></code></pre></figure>
+
+
+    <p>V8 不会给 <code>point</code> 建一个 <code>{"x": 10, "y": 20}</code> 的字典。它做的是：</p>
+
+
+    <ol>
+<li>为这个对象创建一个 <strong>Map（隐藏类）</strong>，记录：有两个属性 <code>x</code> 和 <code>y</code>，分别在偏移 0 和偏移 1 的位置</li>
+<li>对象体内只存两个值：<code>10</code> 和 <code>20</code></li>
+<li>下次访问 <code>point.x</code> 时，V8 通过 Map 知道 <code>x</code> 在偏移 0，直接按偏移读内存，和 C 语言结构体字段访问一样快</li>
+</ol>
+
+
+    <h2 id="3-隐藏类hidden-class--map">3. 隐藏类（Hidden Class / Map）</h2>
+
+
+    <h3 id="31-形状跟踪">3.1 形状跟踪</h3>
+
+
+    <p>每次给对象添加新属性，V8 就生成一个新的 Map，并记录转换关系：</p>
+
+
+    <figure data-rehype-pretty-code-figure=""><pre tabindex="0" data-language="js" data-theme="github-light github-dark"><code data-language="js" data-theme="github-light github-dark" style="display:grid;"><span data-line=""><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword">const</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="value"> obj</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="operator"> =</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation"> {};        </span><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D;" data-token-type="comment">// 初始 Map C0（空对象）</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal">obj.a </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="operator">=</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="value"> 1</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">;             </span><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D;" data-token-type="comment">// C0 → C1（添加属性 a）</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal">obj.b </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="operator">=</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="value"> 2</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">;             </span><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D;" data-token-type="comment">// C1 → C2（添加属性 b）</span></span></code></pre></figure>
+
+
+    <p>V8 内部维护一棵 <strong>转换树（Transition Tree）</strong>：</p>
+
+
+    <pre><code>        C0 (空)
+         │ add 'a'
+         ▼
+        C1 {a}
+         │ add 'b'
+         ▼
+        C2 {a, b}
+</code></pre>
+
+
+    <p>这样一来，所有按相同顺序创建相同属性的对象，会共享同一个 Map：</p>
+
+
+    <figure data-rehype-pretty-code-figure=""><pre tabindex="0" data-language="js" data-theme="github-light github-dark"><code data-language="js" data-theme="github-light github-dark" style="display:grid;"><span data-line=""><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword">const</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="value"> o1</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="operator"> =</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation"> {}; o1.a </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="operator">=</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="value"> 1</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">; o1.b </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="operator">=</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="value"> 2</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">;  </span><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D;" data-token-type="comment">// Map C2</span></span>
+<span data-line=""><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword">const</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="value"> o2</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="operator"> =</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation"> {}; o2.a </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="operator">=</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="value"> 3</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">; o2.b </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="operator">=</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="value"> 4</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">;  </span><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D;" data-token-type="comment">// 也是 Map C2（共享）</span></span></code></pre></figure>
+
+
+    <h3 id="32-描述符数组descriptor-array">3.2 描述符数组（Descriptor Array）</h3>
+
+
+    <p>Map 里还挂着一个描述符数组，记录每个属性的元信息：</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    <div class="table-container"><table><thead><tr><th>属性名</th><th>槽位偏移</th><th>属性类型</th><th>属性特性</th></tr></thead><tbody><tr><td><code>a</code></td><td>offset 0</td><td>Double</td><td>writable, enumerable</td></tr><tr><td><code>b</code></td><td>offset 1</td><td>Tagged</td><td>writable, enumerable</td></tr></tbody></table></div>
+
+
+    <p><strong>对象本体只存值，不存 key</strong>。key 和元数据都在 Map 的描述符数组里，被同形状的对象共享——这就是省内存的关键。</p>
+
+
+    <h3 id="33-内联缓存inline-cache-ic">3.3 内联缓存（Inline Cache, IC）</h3>
+
+
+    <p>Map 机制配合内联缓存，让属性访问极快：</p>
+
+
+    <ol>
+<li>第一次执行 <code>point.x</code>，V8 不知道 <code>point</code> 的形状，走通用逻辑（慢）</li>
+<li>V8 在字节码调用点记录：“上次遇到的对象 Map 是 M1，<code>x</code> 在偏移 0”</li>
+<li>下次再执行 <code>point.x</code>，V8 先检查对象的 Map 是不是 M1：
+<ul>
+<li>是 → 直接按偏移 0 读（快，一次内存比较 + 一次加载）</li>
+<li>不是 → 去慢路径</li>
+</ul>
+</li>
+</ol>
+
+
+    <p>这就是为什么 V8 里”同形状对象”比”异形状对象”快很多——形状一致 = Map 命中 = IC 命中。</p>
+
+
+    <h2 id="4-属性存储的分层">4. 属性存储的分层</h2>
+
+
+    <p>V8 把属性存储分了几个等级，按性能从高到低：</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    <div class="table-container"><table><thead><tr><th>层级</th><th>存储位置</th><th>速度</th><th>说明</th></tr></thead><tbody><tr><td><strong>Fast Property（in-object）</strong></td><td>对象体内的固定槽位</td><td>最快</td><td>按偏移直接访问，类似 C struct 字段</td></tr><tr><td><strong>Property Backing Store</strong></td><td>单独的 FixedArray</td><td>快</td><td>属性多了之后溢出到外部数组</td></tr><tr><td><strong>Dictionary Mode（慢属性）</strong></td><td>哈希表</td><td>慢</td><td>属性顺序不固定、或删除属性后降级</td></tr></tbody></table></div>
+
+
+    <p><strong>性能建议</strong>：</p>
+
+
+    <ul>
+<li>构造函数里一次性初始化所有属性，不要中途动态加属性——避免 Map 频繁转换</li>
+<li>不要随意 <code>delete</code> 属性——会让对象从 fast mode 降级到 dictionary mode</li>
+<li>多个对象按相同顺序初始化属性——共享 Map，IC 命中率高</li>
+</ul>
+
+
+    <h2 id="5-数组elements的表示">5. 数组（Elements）的表示</h2>
+
+
+    <p>数组对象的 <code>Elements</code> 指针指向一块单独的后备存储：</p>
+
+
+    <pre><code>JSArray 对象
+├── Map 指针
+├── Properties（通常为空）
+├── Elements ──→ FixedArray [ elem0, elem1, elem2, ... ]
+└── length（在 Map 或对象体内）
+</code></pre>
+
+
+    <p>V8 还根据元素类型把数组分成不同 <strong>Elements Kind</strong>：</p>
+
+
+    <ul>
+<li><strong>PACKED_SMI_ELEMENTS</strong>：紧凑、全是小整数（最快）</li>
+<li><strong>PACKED_DOUBLE_ELEMENTS</strong>：紧凑、全是 double</li>
+<li><strong>PACKED_ELEMENTS</strong>：紧凑、任意类型</li>
+<li><strong>HOLEY_</strong>*：有洞（稀疏数组，中间有空槽）</li>
+</ul>
+
+
+    <p>从 PACKED_SMI 升级到 PACKED_ELEMENTS 是快路径，但一旦变成 HOLEY（稀疏），性能就下降。</p>
+
+
+    <h2 id="6-函数与代码的内存布局">6. 函数与代码的内存布局</h2>
+
+
+    <p>函数在 V8 里也是对象，但它的内部结构更复杂，因为函数既要能被调用，还要关联它的代码、闭包环境和优化状态。</p>
+
+
+    <h3 id="61-函数对象的核心组件">6.1 函数对象的核心组件</h3>
+
+
+    <pre><code>JSFunction（函数对象本身，可被调用）
+├── Map 指针
+├── SharedFunctionInfo ──→ 函数的"静态"信息（源码、参数个数、字节码）
+├── Context ────────────→ 词法环境（闭包捕获的变量）
+├── FeedbackVector ─────→ 运行时收集的类型反馈（供 JIT 优化用）
+└── Prototype 等
+</code></pre>
+
+
+    <p>四个关键对象各司其职：</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    <div class="table-container"><table><thead><tr><th>对象</th><th>作用</th><th>是否共享</th></tr></thead><tbody><tr><td><strong>SharedFunctionInfo</strong></td><td>函数的静态元信息：源码位置、参数个数、字节码、是否 strict</td><td>同一份源码共享一份</td></tr><tr><td><strong>JSFunction</strong></td><td>函数的可调用对象，每次调用/每次闭包创建一份</td><td>每次创建闭包一份</td></tr><tr><td><strong>Context</strong></td><td>词法环境，保存闭包捕获的自由变量</td><td>每个闭包一份</td></tr><tr><td><strong>FeedbackVector</strong></td><td>类型反馈：这个函数被调用时见过什么类型</td><td>每个 JSFunction 一份</td></tr></tbody></table></div>
+
+
+    <h3 id="62-为什么要拆成这么多对象">6.2 为什么要拆成这么多对象</h3>
+
+
+    <figure data-rehype-pretty-code-figure=""><pre tabindex="0" data-language="js" data-theme="github-light github-dark"><code data-language="js" data-theme="github-light github-dark" style="display:grid;"><span data-line=""><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword">function</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function"> makeAdder</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">(</span><span style="--shiki-light:#E36209;--shiki-dark:#FFAB70;" data-token-type="important">x</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">) {</span></span>
+<span data-line=""><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword">  return</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword"> function</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">(</span><span style="--shiki-light:#E36209;--shiki-dark:#FFAB70;" data-token-type="important">y</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">) { </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword">return</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal"> x </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="operator">+</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal"> y; };</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">}</span></span>
+<span data-line=""> </span>
+<span data-line=""><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword">const</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="value"> add5</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="operator"> =</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function"> makeAdder</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">(</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="value">5</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">);</span></span>
+<span data-line=""><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword">const</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="value"> add10</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="operator"> =</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function"> makeAdder</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">(</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="value">10</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">);</span></span></code></pre></figure>
+
+
+    <p><code>add5</code> 和 <code>add10</code> 是两个不同的 JSFunction，但它们：</p>
+
+
+    <ul>
+<li><strong>共享同一个 SharedFunctionInfo</strong>（同一份源码、同一份字节码）</li>
+<li><strong>各自有自己的 Context</strong>（分别保存 <code>x=5</code> 和 <code>x=10</code>）</li>
+<li><strong>各自有自己的 FeedbackVector</strong>（独立收集类型反馈）</li>
+</ul>
+
+
+    <p>这种拆分让”代码”和”运行时状态”分离：代码字节码只存一份，省内存；每个闭包的环境独立，正确性有保证。</p>
+
+
+    <h3 id="63-代码是怎么存的">6.3 代码是怎么存的</h3>
+
+
+    <p>V8 的编译管线是分层的：</p>
+
+
+    <pre><code>源码 (JS)
+   │
+   ▼  Parser + 字节码生成
+SharedFunctionInfo 里的 Ignition 字节码
+   │
+   ▼  解释执行，同时收集 FeedbackVector
+   │
+   ▼  热点函数触发优化编译器（TurboFan / Maglev）
+优化后的机器码（Code 对象）
+   │
+   ▼  如果运行时类型变了 → 反优化（Deoptimization）
+退回解释执行
+</code></pre>
+
+
+    <p>内存布局上：</p>
+
+
+    <ul>
+<li><strong>Ignition 字节码</strong>：存在 SharedFunctionInfo 关联的 <code>BytecodeArray</code> 里，是中间表示</li>
+<li><strong>优化后的 Code</strong>：TurboFan 生成的原生机器码，存在单独的 Code 对象里，JSFunction 通过 FeedbackVector 关联</li>
+<li><strong>FeedbackVector</strong>：记录每个调用点见过的类型（“这里参数总是 SMI”），是 JIT 优化的依据</li>
+</ul>
+
+
+    <h2 id="7-实际性能启示">7. 实际性能启示</h2>
+
+
+    <p>理解了内存布局，可以推出这些写代码的最佳实践：</p>
+
+
+    <ol>
+<li><strong>对象初始化要一致</strong>：同类型对象按相同顺序建属性，共享 Map，IC 命中率高</li>
+<li><strong>避免动态增删属性</strong>：频繁加属性 = Map 频繁转换；delete = 降级到字典模式</li>
+<li><strong>数组保持紧凑</strong>：不要制造稀疏数组，元素类型尽量统一</li>
+<li><strong>热点函数稳定</strong>：JIT 基于类型反馈优化，如果参数类型忽变，会反复反优化</li>
+<li><strong>闭包的代价</strong>：每个闭包一份 Context + FeedbackVector，不是零成本</li>
+</ol>
+
+
+    <h2 id="参考">参考</h2>
+
+
+    <ul>
+<li><a href="https://v8.dev/docs" class="external external-link">V8 官方文档 - Design Elements</a></li>
+<li><a href="https://nafees.quest/hidden-classes-in-v8" class="external external-link">Hidden Classes in V8</a></li>
+<li><a href="https://berkaycrk.com/articles/javascript-objects-under-the-hood" class="external external-link">JavaScript Object Internals</a></li>
+<li><a href="https://mrale.ph/blog/2015/01/11/whats-up-with-monomorphism.html" class="external external-link">An Introduction to Speculative Optimization in V8 - Benedikt Meurer</a></li>
+</ul></article>
+    <div class="note-end"><a href="/">← 返回全部笔记</a><span>持续学习，持续整理。</span></div>
+  </main>
+</body>
+</html>

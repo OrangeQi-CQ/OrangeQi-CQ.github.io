@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#f3f4f0" />
+    <meta name="description" content="OrangeQi 的个人知识库，关于计算机科学、编程与工程实践的持续笔记。" />
+    <title>OrangeQi · 个人知识库</title>
+    <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/assets/site.css" />
+    <script src="/assets/app.js" defer></script>
+  </head>
+  <body class="home-page">
+    <header class="site-header">
+      <a class="brand" href="/" aria-label="OrangeQi 知识库首页">
+        <span class="brand-mark" aria-hidden="true">O</span>
+        <span class="brand-name">OrangeQi <span>知识库</span></span>
+      </a>
+      <nav class="header-nav" aria-label="主导航">
+        <a class="nav-current" href="#library">笔记库</a>
+        <a href="#subjects">三大学科</a>
+        <a class="header-external" href="https://github.com/OrangeQi-CQ" target="_blank" rel="noreferrer">GitHub <span aria-hidden="true">↗</span></a>
+        <button class="theme-toggle" type="button" data-theme-toggle aria-label="切换深色模式" title="切换深色模式">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.2 15.3A8.8 8.8 0 0 1 8.7 3.8 8.8 8.8 0 1 0 20.2 15.3Z" /></svg>
+        </button>
+      </nav>
+    </header>
+
+    <main>
+      <section class="intro-band" aria-labelledby="page-title">
+        <div class="intro-copy">
+          <p class="eyebrow"><span class="status-dot"></span> PERSONAL KNOWLEDGE INDEX</p>
+          <h1 id="page-title">把复杂的事，<br /><span>想清楚再记下来。</span></h1>
+          <p class="intro-description">关于计算机、编程语言与工程实践的持续记录。<br class="desktop-break" />从一个问题出发，沿着知识的脉络往下读。</p>
+        </div>
+        <div class="intro-stats" aria-label="知识库统计">
+          <div class="stat-item"><span class="stat-number" data-note-count>--</span><span class="stat-label">篇笔记</span></div>
+          <div class="stat-item"><span class="stat-number" data-topic-count>--</span><span class="stat-label">个主题</span></div>
+          <div class="stat-item"><span class="stat-number stat-date" data-latest-date>持续</span><span class="stat-label">更新中</span></div>
+        </div>
+      </section>
+
+      <section class="library-section" id="library" aria-labelledby="library-title">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow section-index">01 / LIBRARY</p>
+            <h2 id="library-title">知识索引</h2>
+          </div>
+          <p class="section-caption">按主题浏览，或搜索关键词</p>
+        </div>
+
+        <nav class="subject-tabs" id="subjects" aria-label="按学科筛选">
+          <button class="subject-tab is-active" type="button" data-domain-filter="all" aria-pressed="true">全部学科</button>
+          <button class="subject-tab" type="button" data-domain-filter="computer-tech" aria-pressed="false"><span class="subject-tab-mark mark-computer">01</span>计算机技术</button>
+          <button class="subject-tab" type="button" data-domain-filter="ai-creation" aria-pressed="false"><span class="subject-tab-mark mark-creation">02</span>AI 创作</button>
+          <button class="subject-tab" type="button" data-domain-filter="finance" aria-pressed="false"><span class="subject-tab-mark mark-finance">03</span>金融与商业</button>
+        </nav>
+
+        <div class="library-toolbar">
+          <label class="search-field">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8" /><path d="m16 16 4.2 4.2" /></svg>
+            <input id="note-search" type="search" placeholder="搜索笔记、主题或关键词" autocomplete="off" aria-label="搜索笔记" />
+            <kbd>/</kbd>
+          </label>
+          <label class="sort-control"><span class="sr-only">排序方式</span>
+            <select id="note-sort" aria-label="笔记排序">
+              <option value="updated">最近更新</option>
+              <option value="recorded">记录日期</option>
+              <option value="title">标题顺序</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="library-layout">
+          <aside class="topic-sidebar" aria-label="知识主题">
+            <div class="sidebar-heading"><h3>主题</h3><span>TOPICS</span></div>
+            <div class="topic-list" id="topic-list">
+              <noscript><p class="noscript-note">启用 JavaScript 后可浏览笔记索引。</p></noscript>
+            </div>
+            <div class="sidebar-footnote"><span class="sidebar-rule"></span><p>一边学习，<br />一边整理。</p></div>
+          </aside>
+
+          <section class="notes-panel" aria-labelledby="notes-heading">
+            <div class="notes-panel-heading">
+              <div><p class="eyebrow notes-kicker">BROWSE & DISCOVER</p><h3 id="notes-heading">全部笔记</h3></div>
+              <span class="result-count" id="result-count" aria-live="polite">正在载入</span>
+            </div>
+            <div class="note-list" id="note-list" aria-live="polite">
+              <div class="loading-state"><span class="loading-line"></span>正在整理索引</div>
+            </div>
+            <p class="empty-state" id="empty-state" hidden>没有找到匹配的笔记。试试其他关键词。</p>
+          </section>
+
+          <aside class="feature-column" aria-label="精选笔记">
+            <p class="eyebrow feature-label">从一篇笔记开始</p>
+            <a class="feature-card" data-featured-note href="/">
+              <div class="feature-image"><img src="/assets/v8-memory-map.svg" alt="V8 JavaScript 对象内存布局示意：对象槽位指向隐藏类、属性存储和元素数组" width="1080" height="680" /></div>
+              <div class="feature-copy">
+                <span class="feature-category" data-featured-category>浏览器与运行时</span>
+                <h3 data-featured-title>V8 对象与代码内存布局</h3>
+                <p data-featured-summary>从隐藏类到内联缓存，理解 JavaScript 对象如何在 V8 堆内存中表示。</p>
+                <span class="feature-link">阅读笔记 <span aria-hidden="true">↗</span></span>
+              </div>
+            </a>
+            <div class="index-note"><span class="index-note-mark">i</span><p>所有内容均以独立 HTML 保存，新增笔记会自动出现在索引中。</p></div>
+          </aside>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <a class="footer-brand" href="/">OrangeQi <span>知识库</span></a>
+      <p>持续学习，持续整理。<span data-current-year></span></p>
+      <a href="https://github.com/OrangeQi-CQ/OrangeQi-CQ.github.io" target="_blank" rel="noreferrer">查看源码 <span aria-hidden="true">↗</span></a>
+    </footer>
+  </body>
+</html>

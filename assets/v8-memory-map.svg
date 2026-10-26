@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="680" viewBox="0 0 1080 680" role="img" aria-labelledby="title desc">
+  <title id="title">V8 对象的内存布局</title>
+  <desc id="desc">JavaScript 对象中的 Map、属性存储与 Elements 数组，以及 Map 对象指向的共享描述符。</desc>
+  <rect width="1080" height="680" fill="#edf1eb"/>
+  <path d="M0 540H1080M810 0V680" stroke="#d6ded4" stroke-width="1"/>
+  <text x="70" y="77" fill="#53745d" font-family="monospace" font-size="15" letter-spacing="2">V8 OBJECT MODEL / 01</text>
+  <text x="70" y="131" fill="#26372d" font-family="sans-serif" font-size="38" font-weight="600">一个对象，几层结构</text>
+  <text x="70" y="166" fill="#69756c" font-family="sans-serif" font-size="17">JSObject、隐藏类 Map 与属性存储</text>
+  <g fill="#fafbf8" stroke="#b9c9b7" stroke-width="2">
+    <rect x="85" y="234" width="350" height="70" rx="3"/>
+    <rect x="85" y="304" width="350" height="70" rx="3"/>
+    <rect x="85" y="374" width="350" height="70" rx="3"/>
+    <rect x="85" y="444" width="350" height="70" rx="3"/>
+    <rect x="650" y="268" width="320" height="70" rx="3"/>
+    <rect x="650" y="388" width="320" height="70" rx="3"/>
+    <rect x="650" y="508" width="320" height="70" rx="3"/>
+  </g>
+  <rect x="85" y="234" width="350" height="70" rx="3" fill="#dcebdd" stroke="#81a386" stroke-width="2"/>
+  <rect x="650" y="388" width="320" height="70" rx="3" fill="#f0e7d5" stroke="#c2a778" stroke-width="2"/>
+  <g fill="#26372d" font-family="monospace" font-size="17">
+    <text x="111" y="276">Map pointer</text>
+    <text x="111" y="346">Properties pointer</text>
+    <text x="111" y="416">Elements pointer</text>
+    <text x="111" y="486">In-object slots</text>
+    <text x="678" y="310">Map / Hidden class</text>
+    <text x="678" y="430">Descriptor array</text>
+    <text x="678" y="550">Transition table</text>
+  </g>
+  <g fill="#6f7d71" font-family="sans-serif" font-size="14">
+    <text x="111" y="291">shape metadata</text>
+    <text x="111" y="361">named properties</text>
+    <text x="111" y="431">indexed elements</text>
+    <text x="111" y="501">inline values x · y</text>
+    <text x="678" y="325">shared by same-shape objects</text>
+    <text x="678" y="445">names, offsets, attributes</text>
+    <text x="678" y="565">object shape transitions</text>
+  </g>
+  <g fill="none" stroke="#65856a" stroke-width="2.5">
+    <path d="M435 269H560Q590 269 590 298T650 303"/>
+    <path d="M435 339H540Q578 339 578 412T650 423"/>
+    <path d="M810 338V388"/>
+    <path d="M810 458V508"/>
+  </g>
+  <g fill="#65856a"><path d="m645 297 11 6-11 6z"/><path d="m645 417 11 6-11 6z"/><path d="m804 382 6 11 6-11z"/><path d="m804 502 6 11 6-11z"/></g>
+  <circle cx="568" cy="269" r="7" fill="#bc775e"/>
+  <text x="70" y="604" fill="#53745d" font-family="monospace" font-size="13">SAME SHAPE → SHARED MAP → FAST PROPERTY ACCESS</text>
+  <text x="70" y="638" fill="#879187" font-family="sans-serif" font-size="12">ORANGEQI · KNOWLEDGE NOTES</text>
+</svg>

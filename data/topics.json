@@ -1,0 +1,22 @@
+{
+  "domains": [
+    {"id":"computer-tech","title":"计算机技术","subtitle":"浏览器内核、编程语言、系统与智能工具的结构性知识。","index":"01"},
+    {"id":"ai-creation","title":"AI 创作","subtitle":"将模型能力带入前端、视频、剪辑与游戏创作。","index":"02"},
+    {"id":"finance","title":"金融与商业","subtitle":"金融市场、商业逻辑与经济思维的知识整理。","index":"03"}
+  ],
+  "topics": [
+    {"id":"chromium","domain":"computer-tech","label":"Chromium 架构与内核","notesPath":"computer-tech/chromium"},
+    {"id":"ai-security","domain":"computer-tech","label":"AI 安全","notesPath":"computer-tech/ai-security"},
+    {"id":"agent-frameworks","domain":"computer-tech","label":"Agent 框架","notesPath":"computer-tech/agent-frameworks"},
+    {"id":"os-applications","domain":"computer-tech","label":"操作系统应用","notesPath":"computer-tech/os-applications"},
+    {"id":"cpp-rust","domain":"computer-tech","label":"C++ 与 Rust 语法","notesPath":"computer-tech/cpp-rust"},
+    {"id":"llm-algorithms","domain":"computer-tech","label":"大模型算法","notesPath":"computer-tech/llm-algorithms"},
+    {"id":"algorithm-practice","domain":"computer-tech","label":"算法竞赛","notesPath":"computer-tech/algorithm-practice","supplemental":true},
+    {"id":"engineering-tools","domain":"computer-tech","label":"开发工具","notesPath":"computer-tech/engineering-tools","supplemental":true},
+    {"id":"web-frontend","domain":"ai-creation","label":"Web 前端","notesPath":"ai-creation/web-frontend"},
+    {"id":"ai-video","domain":"ai-creation","label":"AI 视频","notesPath":"ai-creation/ai-video"},
+    {"id":"ai-editing","domain":"ai-creation","label":"AI 剪辑","notesPath":"ai-creation/ai-editing"},
+    {"id":"ai-games","domain":"ai-creation","label":"AI 游戏","notesPath":"ai-creation/ai-games"},
+    {"id":"finance","domain":"finance","label":"金融与商业","notesPath":"finance"}
+  ]
+}

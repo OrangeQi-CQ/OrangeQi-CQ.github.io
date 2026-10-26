@@ -1,0 +1,558 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Jekyll 是一个基于 Ruby 的静态站点生成器，它将 Markdown 文件转换为静态 HTML 网站。作为 GitHub Pages 的默认生成器，Jekyll 以其简洁的设计和强大的功能而受到开发者的喜爱。本文将深入分析 Jekyll 的实现原理，并提供构建类似框架的具体步骤和代码示例。">
+  <meta name="note:title" content="Jekyll 实现原理与构建类似框架指南">
+  <meta name="note:topic" content="engineering-tools">
+  <meta name="note:date" content="2026-01-17">
+  <meta name="note:updated" content="2026-01-17">
+  <meta name="note:summary" content="Jekyll 是一个基于 Ruby 的静态站点生成器，它将 Markdown 文件转换为静态 HTML 网站。作为 GitHub Pages 的默认生成器，Jekyll 以其简洁的设计和强大的功能而受到开发者的喜爱。本文将深入分析 Jekyll 的实现原理，并提供构建类似框架的具体步骤和代码示例。">
+  <meta name="note:tags" content="">
+  <meta name="note:path" content="计算机/全栈应用开发/jekyll-实现原理与构建类似框架指南.html">
+
+  <title>Jekyll 实现原理与构建类似框架指南 | OrangeQi 知识库</title>
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/assets/site.css">
+</head>
+<body class="article-page">
+  <header class="site-header">
+    <a class="brand" href="/" aria-label="OrangeQi 知识库首页"><span class="brand-mark" aria-hidden="true">O</span><span class="brand-name">OrangeQi <span>知识库</span></span></a>
+    <nav class="header-nav" aria-label="主导航"><a href="/">返回笔记库 <span aria-hidden="true">↗</span></a></nav>
+  </header>
+  <main class="note-page">
+    <nav class="note-breadcrumbs" aria-label="面包屑"><a href="/">笔记库</a><span>/</span><span>开发工具</span><span>/</span><span>Jekyll 实现原理与构建类似框架指南</span></nav>
+    <header class="note-header"><p class="note-eyebrow">开发工具 / NOTE</p><h1>Jekyll 实现原理与构建类似框架指南</h1><p class="note-deck">Jekyll 是一个基于 Ruby 的静态站点生成器，它将 Markdown 文件转换为静态 HTML 网站。作为 GitHub Pages 的默认生成器，Jekyll 以其简洁的设计和强大的功能而受到开发者的喜爱。本文将深入分析 Jekyll 的实现原理，并提供构建类似框架的具体步骤和代码示例。</p><div class="note-byline"><span class="note-date-item">更新 <time datetime="2026-01-17">2026-01-17</time></span><span class="note-date-item">记录 <time datetime="2026-01-17">2026-01-17</time></span></div></header>
+    <article class="note-content"><h2 id="1-引言">1. 引言</h2>
+
+
+    <p>Jekyll 是一个基于 Ruby 的静态站点生成器，它将 Markdown 文件转换为静态 HTML 网站。作为 GitHub Pages 的默认生成器，Jekyll 以其简洁的设计和强大的功能而受到开发者的喜爱。本文将深入分析 Jekyll 的实现原理，并提供构建类似框架的具体步骤和代码示例。</p>
+
+
+    <h2 id="2-jekyll-核心实现原理">2. Jekyll 核心实现原理</h2>
+
+
+    <h3 id="21-构建流程详解">2.1 构建流程详解</h3>
+
+
+    <p>Jekyll 的构建过程是一个多阶段的流水线，从原始文件到最终静态网站的转换过程如下：</p>
+
+
+    <ol>
+<li><strong>配置加载</strong>：读取 <code>_config.yml</code> 文件，解析全局配置项，如站点标题、URL、插件等</li>
+<li><strong>文件收集</strong>：递归遍历项目目录，识别需要处理的文件（Markdown、HTML、Liquid 模板等）</li>
+<li><strong>Front Matter 解析</strong>：提取文件顶部的 YAML 元数据，作为页面变量</li>
+<li><strong>内容转换</strong>：将 Markdown 文件转换为 HTML，处理 Liquid 模板标签</li>
+<li><strong>布局应用</strong>：根据 Front Matter 中指定的布局，将内容嵌入到布局模板中</li>
+<li><strong>站点生成</strong>：将处理后的内容写入 <code>_site</code> 目录，生成静态文件</li>
+<li><strong>资源复制</strong>：将 CSS、JavaScript、图片等静态资源复制到 <code>_site</code> 目录</li>
+</ol>
+
+
+    <h3 id="22-核心模块设计">2.2 核心模块设计</h3>
+
+
+    <h4 id="221-内容处理系统">2.2.1 内容处理系统</h4>
+
+
+    <ul>
+<li><strong>Markdown 解析器</strong>：使用 kramdown 等库将 Markdown 转换为 HTML</li>
+<li><strong>Liquid 模板引擎</strong>：处理模板中的变量、标签和过滤器</li>
+<li><strong>Front Matter 解析器</strong>：使用 YAML 解析器提取元数据</li>
+<li><strong>代码高亮</strong>：使用 rouge 为代码块添加语法高亮</li>
+</ul>
+
+
+    <h4 id="222-站点构建系统">2.2.2 站点构建系统</h4>
+
+
+    <ul>
+<li><strong>文件系统监控</strong>：跟踪文件变化，支持增量构建</li>
+<li><strong>路径解析</strong>：根据文件位置生成对应的 URL 路径</li>
+<li><strong>依赖管理</strong>：处理布局、包含文件的依赖关系</li>
+<li><strong>插件系统</strong>：通过钩子机制扩展功能</li>
+</ul>
+
+
+    <h4 id="223-服务系统">2.2.3 服务系统</h4>
+
+
+    <ul>
+<li><strong>本地服务器</strong>：提供开发预览功能</li>
+<li><strong>自动重载</strong>：文件变化时自动重新构建</li>
+<li><strong>端口管理</strong>：处理本地服务器端口配置</li>
+</ul>
+
+
+    <h2 id="3-构建类似-jekyll-的框架">3. 构建类似 Jekyll 的框架</h2>
+
+
+    <h3 id="31-技术栈选择">3.1 技术栈选择</h3>
+
+
+    <p>构建静态站点生成器可以选择多种技术栈，以下是几种常见选择：</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    <div class="table-container"><table><thead><tr><th>技术栈</th><th>优势</th><th>劣势</th></tr></thead><tbody><tr><td>Ruby</td><td>与 Jekyll 一致，生态成熟</td><td>学习曲线较陡</td></tr><tr><td>Node.js</td><td>前端开发者熟悉，npm 包丰富</td><td>性能可能不如编译型语言</td></tr><tr><td>Python</td><td>语法简洁，库丰富</td><td>异步处理能力相对较弱</td></tr><tr><td>Go</td><td>编译型语言，性能优异</td><td>模板系统相对简单</td></tr></tbody></table></div>
+
+
+    <h3 id="32-核心组件设计">3.2 核心组件设计</h3>
+
+
+    <h4 id="321-文件系统模块">3.2.1 文件系统模块</h4>
+
+
+    <figure data-rehype-pretty-code-figure=""><pre tabindex="0" data-language="javascript" data-theme="github-light github-dark"><code data-language="javascript" data-theme="github-light github-dark" style="display:grid;"><span data-line=""><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D;" data-token-type="comment">// 文件系统模块示例（Node.js）</span></span>
+<span data-line=""><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword">const</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="value"> fs</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="operator"> =</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function"> require</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">(</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF;" data-token-type="string">'fs'</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">);</span></span>
+<span data-line=""><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword">const</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="value"> path</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="operator"> =</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function"> require</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">(</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF;" data-token-type="string">'path'</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">);</span></span>
+<span data-line=""> </span>
+<span data-line=""><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword">class</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="property"> FileSystem</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation"> {</span></span>
+<span data-line=""><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword">  constructor</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">(</span><span style="--shiki-light:#E36209;--shiki-dark:#FFAB70;" data-token-type="important">sourceDir</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">) {</span></span>
+<span data-line=""><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="value">    this</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">.sourceDir </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="operator">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal"> sourceDir;</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">  }</span></span>
+<span data-line=""> </span>
+<span data-line=""><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D;" data-token-type="comment">  // 递归遍历目录</span></span>
+<span data-line=""><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function">  walk</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">(</span><span style="--shiki-light:#E36209;--shiki-dark:#FFAB70;" data-token-type="important">dir</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">, </span><span style="--shiki-light:#E36209;--shiki-dark:#FFAB70;" data-token-type="important">callback</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">) {</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal">    fs.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function">readdirSync</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal">(dir).</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function">forEach</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">(</span><span style="--shiki-light:#E36209;--shiki-dark:#FFAB70;" data-token-type="important">file</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword"> =&gt;</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation"> {</span></span>
+<span data-line=""><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword">      const</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="value"> filePath</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="operator"> =</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal"> path.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function">join</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal">(dir, file);</span></span>
+<span data-line=""><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword">      const</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="value"> stat</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="operator"> =</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal"> fs.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function">statSync</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal">(filePath);</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">      </span></span>
+<span data-line=""><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword">      if</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal"> (stat.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function">isDirectory</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">()) {</span></span>
+<span data-line=""><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="value">        this</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function">walk</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal">(filePath, callback);</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">      } </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword">else</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation"> {</span></span>
+<span data-line=""><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function">        callback</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal">(filePath);</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">      }</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">    });</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">  }</span></span>
+<span data-line=""> </span>
+<span data-line=""><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D;" data-token-type="comment">  // 读取文件内容</span></span>
+<span data-line=""><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function">  readFile</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">(</span><span style="--shiki-light:#E36209;--shiki-dark:#FFAB70;" data-token-type="important">filePath</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">) {</span></span>
+<span data-line=""><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword">    return</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal"> fs.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function">readFileSync</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal">(filePath, </span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF;" data-token-type="string">'utf8'</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">);</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">  }</span></span>
+<span data-line=""> </span>
+<span data-line=""><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D;" data-token-type="comment">  // 写入文件</span></span>
+<span data-line=""><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function">  writeFile</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">(</span><span style="--shiki-light:#E36209;--shiki-dark:#FFAB70;" data-token-type="important">filePath</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">, </span><span style="--shiki-light:#E36209;--shiki-dark:#FFAB70;" data-token-type="important">content</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">) {</span></span>
+<span data-line=""><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword">    const</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="value"> dir</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="operator"> =</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal"> path.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function">dirname</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal">(filePath);</span></span>
+<span data-line=""><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword">    if</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;"> (</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="operator">!</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal">fs.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function">existsSync</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal">(dir)) {</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal">      fs.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function">mkdirSync</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal">(dir, { recursive: </span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="value">true</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation"> });</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">    }</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal">    fs.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function">writeFileSync</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal">(filePath, content);</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">  }</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">}</span></span></code></pre></figure>
+
+
+    <h4 id="322-内容处理模块">3.2.2 内容处理模块</h4>
+
+
+    <figure data-rehype-pretty-code-figure=""><pre tabindex="0" data-language="javascript" data-theme="github-light github-dark"><code data-language="javascript" data-theme="github-light github-dark" style="display:grid;"><span data-line=""><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D;" data-token-type="comment">// 内容处理模块示例（Node.js）</span></span>
+<span data-line=""><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword">const</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="value"> marked</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="operator"> =</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function"> require</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">(</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF;" data-token-type="string">'marked'</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">);</span></span>
+<span data-line=""><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword">const</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="value"> yaml</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="operator"> =</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function"> require</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">(</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF;" data-token-type="string">'js-yaml'</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">);</span></span>
+<span data-line=""> </span>
+<span data-line=""><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword">class</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="property"> ContentProcessor</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation"> {</span></span>
+<span data-line=""><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D;" data-token-type="comment">  // 解析 Front Matter</span></span>
+<span data-line=""><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function">  parseFrontMatter</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">(</span><span style="--shiki-light:#E36209;--shiki-dark:#FFAB70;" data-token-type="important">content</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">) {</span></span>
+<span data-line=""><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword">    const</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="value"> frontMatterRegex</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="operator"> =</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF;" data-token-type="regexp"> /</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword">^</span><span style="--shiki-light:#032F62;--shiki-dark:#DBEDFF;" data-token-type="regexp">---</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="value">\n</span><span style="--shiki-light:#032F62;--shiki-dark:#DBEDFF;" data-token-type="punctuation">(</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="punctuation">[\s\S]</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="operator">*?</span><span style="--shiki-light:#032F62;--shiki-dark:#DBEDFF;" data-token-type="punctuation">)</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="value">\n</span><span style="--shiki-light:#032F62;--shiki-dark:#DBEDFF;" data-token-type="regexp">---</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="value">\n</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF;" data-token-type="string">/</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">;</span></span>
+<span data-line=""><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword">    const</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="value"> match</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="operator"> =</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal"> content.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function">match</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal">(frontMatterRegex);</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">    </span></span>
+<span data-line=""><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword">    if</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal"> (match) {</span></span>
+<span data-line=""><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword">      const</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="value"> frontMatter</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="operator"> =</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal"> yaml.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function">load</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal">(match[</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="value">1</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">]);</span></span>
+<span data-line=""><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword">      const</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="value"> contentWithoutFrontMatter</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="operator"> =</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal"> content.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function">replace</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal">(frontMatterRegex, </span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF;" data-token-type="string">''</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">);</span></span>
+<span data-line=""><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword">      return</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation"> { frontMatter, content: contentWithoutFrontMatter };</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">    }</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">    </span></span>
+<span data-line=""><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword">    return</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation"> { frontMatter: {}, content };</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">  }</span></span>
+<span data-line=""> </span>
+<span data-line=""><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D;" data-token-type="comment">  // 转换 Markdown 为 HTML</span></span>
+<span data-line=""><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function">  markdownToHtml</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">(</span><span style="--shiki-light:#E36209;--shiki-dark:#FFAB70;" data-token-type="important">markdown</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">) {</span></span>
+<span data-line=""><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword">    return</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function"> marked</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal">(markdown);</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">  }</span></span>
+<span data-line=""> </span>
+<span data-line=""><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D;" data-token-type="comment">  // 处理模板（简化版）</span></span>
+<span data-line=""><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function">  processTemplate</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">(</span><span style="--shiki-light:#E36209;--shiki-dark:#FFAB70;" data-token-type="important">template</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">, </span><span style="--shiki-light:#E36209;--shiki-dark:#FFAB70;" data-token-type="important">data</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">) {</span></span>
+<span data-line=""><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword">    return</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal"> template.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function">replace</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">(</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF;" data-token-type="string">/</span><span style="--shiki-light:#22863A;--shiki-light-font-weight:bold;--shiki-dark:#85E89D;--shiki-dark-font-weight:bold;" data-token-type="string">\{\{</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="value">\s</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="operator">*</span><span style="--shiki-light:#032F62;--shiki-dark:#DBEDFF;" data-token-type="punctuation">(</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="value">\w</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="operator">+</span><span style="--shiki-light:#032F62;--shiki-dark:#DBEDFF;" data-token-type="punctuation">)</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="value">\s</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="operator">*</span><span style="--shiki-light:#22863A;--shiki-light-font-weight:bold;--shiki-dark:#85E89D;--shiki-dark-font-weight:bold;" data-token-type="string">\}\}</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF;" data-token-type="string">/</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword">g</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">, (</span><span style="--shiki-light:#E36209;--shiki-dark:#FFAB70;" data-token-type="important">match</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">, </span><span style="--shiki-light:#E36209;--shiki-dark:#FFAB70;" data-token-type="important">key</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">) </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword">=&gt;</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation"> {</span></span>
+<span data-line=""><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword">      return</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal"> data[key] </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="operator">||</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF;" data-token-type="string"> ''</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">;</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">    });</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">  }</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">}</span></span></code></pre></figure>
+
+
+    <h4 id="323-站点构建模块">3.2.3 站点构建模块</h4>
+
+
+    <figure data-rehype-pretty-code-figure=""><pre tabindex="0" data-language="javascript" data-theme="github-light github-dark"><code data-language="javascript" data-theme="github-light github-dark" style="display:grid;"><span data-line=""><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D;" data-token-type="comment">// 站点构建模块示例（Node.js）</span></span>
+<span data-line=""><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword">const</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="value"> path</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="operator"> =</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function"> require</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">(</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF;" data-token-type="string">'path'</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">);</span></span>
+<span data-line=""> </span>
+<span data-line=""><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword">class</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="property"> SiteBuilder</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation"> {</span></span>
+<span data-line=""><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword">  constructor</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">(</span><span style="--shiki-light:#E36209;--shiki-dark:#FFAB70;" data-token-type="important">sourceDir</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">, </span><span style="--shiki-light:#E36209;--shiki-dark:#FFAB70;" data-token-type="important">destinationDir</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">) {</span></span>
+<span data-line=""><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="value">    this</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">.sourceDir </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="operator">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal"> sourceDir;</span></span>
+<span data-line=""><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="value">    this</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">.destinationDir </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="operator">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal"> destinationDir;</span></span>
+<span data-line=""><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="value">    this</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">.fileSystem </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="operator">=</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword"> new</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function"> FileSystem</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal">(sourceDir);</span></span>
+<span data-line=""><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="value">    this</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">.contentProcessor </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="operator">=</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword"> new</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function"> ContentProcessor</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">();</span></span>
+<span data-line=""><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="value">    this</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">.config </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="operator">=</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="value"> this</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function">loadConfig</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">();</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">  }</span></span>
+<span data-line=""> </span>
+<span data-line=""><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D;" data-token-type="comment">  // 加载配置文件</span></span>
+<span data-line=""><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function">  loadConfig</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">() {</span></span>
+<span data-line=""><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword">    const</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="value"> configPath</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="operator"> =</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal"> path.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function">join</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">(</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="value">this</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">.sourceDir, </span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF;" data-token-type="string">'_config.yml'</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">);</span></span>
+<span data-line=""><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword">    if</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal"> (fs.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function">existsSync</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal">(configPath)) {</span></span>
+<span data-line=""><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword">      const</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="value"> configContent</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="operator"> =</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="value"> this</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">.fileSystem.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function">readFile</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal">(configPath);</span></span>
+<span data-line=""><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword">      return</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal"> yaml.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function">load</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal">(configContent);</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">    }</span></span>
+<span data-line=""><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword">    return</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation"> {};</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">  }</span></span>
+<span data-line=""> </span>
+<span data-line=""><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D;" data-token-type="comment">  // 构建站点</span></span>
+<span data-line=""><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function">  build</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">() {</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal">    console.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function">log</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">(</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF;" data-token-type="string">'Building site...'</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">);</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">    </span></span>
+<span data-line=""><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D;" data-token-type="comment">    // 遍历所有文件</span></span>
+<span data-line=""><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="value">    this</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">.fileSystem.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function">walk</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">(</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="value">this</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">.sourceDir, (</span><span style="--shiki-light:#E36209;--shiki-dark:#FFAB70;" data-token-type="important">filePath</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">) </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword">=&gt;</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation"> {</span></span>
+<span data-line=""><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D;" data-token-type="comment">      // 跳过特殊目录</span></span>
+<span data-line=""><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword">      if</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal"> (filePath.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function">includes</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">(</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF;" data-token-type="string">'/_'</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">) </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="operator">||</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal"> filePath.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function">includes</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">(</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF;" data-token-type="string">'</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="string">\'</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF;" data-token-type="string">)) </span><span style="--shiki-light:#B31D28;--shiki-light-font-style:italic;--shiki-dark:#FDAEB7;--shiki-dark-font-style:italic;" data-token-type="error">{</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal">        return;</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">      }</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">      </span></span>
+<span data-line=""><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D;" data-token-type="comment">      // 处理 Markdown 文件</span></span>
+<span data-line=""><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function">      if</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal"> (filePath.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function">endsWith</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">(</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF;" data-token-type="string">'.md'</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">)) {</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">        this.processMarkdownFile(filePath);</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">      } </span></span>
+<span data-line=""><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D;" data-token-type="comment">      // 复制静态文件</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal">      else {</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">        this.copyStaticFile(filePath);</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">      }</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">    });</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">    </span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal">    console.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function">log</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">(</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF;" data-token-type="string">'Build completed!'</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">);</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">  }</span></span>
+<span data-line=""> </span>
+<span data-line=""><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D;" data-token-type="comment">  // 处理 Markdown 文件</span></span>
+<span data-line=""><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function">  processMarkdownFile</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal">(filePath) {</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal">    const content </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="operator">=</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="value"> this</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">.fileSystem.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function">readFile</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal">(filePath);</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">    const { frontMatter, </span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function">content</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">: markdownContent } = this.contentProcessor.parseFrontMatter(content);</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">    </span></span>
+<span data-line=""><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D;" data-token-type="comment">    // 转换为 HTML</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal">    const htmlContent </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="operator">=</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="value"> this</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">.contentProcessor.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function">markdownToHtml</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal">(markdownContent);</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">    </span></span>
+<span data-line=""><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D;" data-token-type="comment">    // 应用布局</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal">    const layout </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="operator">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal"> frontMatter.layout </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="operator">||</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF;" data-token-type="string"> 'default'</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">;</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal">    const layoutPath </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="operator">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal"> path.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function">join</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">(</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="value">this</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">.sourceDir, </span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF;" data-token-type="string">'_layouts'</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">, </span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF;" data-token-type="string">`${</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal">layout</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF;" data-token-type="keyword">}.html`</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">);</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">    </span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal">    let finalContent </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="operator">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal"> htmlContent;</span></span>
+<span data-line=""><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function">    if</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation"> (fs.existsSync(</span><span style="--shiki-light:#E36209;--shiki-dark:#FFAB70;" data-token-type="important">layoutPath</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">)) {</span></span>
+<span data-line=""><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword">      const</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="value"> layoutContent</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="operator"> =</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="value"> this</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">.fileSystem.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function">readFile</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal">(layoutPath);</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal">      finalContent </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="operator">=</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="value"> this</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">.contentProcessor.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function">processTemplate</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal">(layoutContent, {</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">        content: htmlContent,</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">        page: frontMatter,</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">        site: </span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="value">this</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">.config</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">      });</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">    }</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">    </span></span>
+<span data-line=""><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D;" data-token-type="comment">    // 生成目标路径</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal">    const relativePath </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="operator">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal"> path.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function">relative</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">(</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="value">this</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">.sourceDir, filePath);</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal">    const destinationPath </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="operator">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal"> path.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function">join</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">(</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="value">this</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">.destinationDir, relativePath.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function">replace</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">(</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF;" data-token-type="string">'.md'</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">, </span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF;" data-token-type="string">'.html'</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">));</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">    </span></span>
+<span data-line=""><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D;" data-token-type="comment">    // 写入文件</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal">    this.fileSystem.writeFile(destinationPath, finalContent);</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">  }</span></span>
+<span data-line=""> </span>
+<span data-line=""><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D;" data-token-type="comment">  // 复制静态文件</span></span>
+<span data-line=""><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function">  copyStaticFile</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal">(filePath) {</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal">    const content </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="operator">=</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="value"> this</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">.fileSystem.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function">readFile</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal">(filePath);</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal">    const relativePath </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="operator">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal"> path.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function">relative</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">(</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="value">this</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">.sourceDir, filePath);</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal">    const destinationPath </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="operator">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal"> path.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function">join</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">(</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="value">this</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">.destinationDir, relativePath);</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal">    this.fileSystem.writeFile(destinationPath, content);</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">  }</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">}</span></span></code></pre></figure>
+
+
+    <h3 id="33-命令行界面">3.3 命令行界面</h3>
+
+
+    <figure data-rehype-pretty-code-figure=""><pre tabindex="0" data-language="javascript" data-theme="github-light github-dark"><code data-language="javascript" data-theme="github-light github-dark" style="display:grid;"><span data-line=""><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D;" data-token-type="comment">// 命令行界面示例（Node.js）</span></span>
+<span data-line=""><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword">const</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="value"> commander</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="operator"> =</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function"> require</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">(</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF;" data-token-type="string">'commander'</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">);</span></span>
+<span data-line=""> </span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal">commander</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">  .</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function">command</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">(</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF;" data-token-type="string">'build'</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">)</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">  .</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function">description</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">(</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF;" data-token-type="string">'Build the site'</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">)</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">  .</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function">action</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">(() </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword">=&gt;</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation"> {</span></span>
+<span data-line=""><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword">    const</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="value"> builder</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="operator"> =</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword"> new</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function"> SiteBuilder</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">(</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF;" data-token-type="string">'.'</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">, </span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF;" data-token-type="string">'_site'</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">);</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal">    builder.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function">build</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">();</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">  });</span></span>
+<span data-line=""> </span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal">commander</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">  .</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function">command</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">(</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF;" data-token-type="string">'serve'</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">)</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">  .</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function">description</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">(</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF;" data-token-type="string">'Start a local server'</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">)</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">  .</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function">option</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">(</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF;" data-token-type="string">'-p, --port &lt;port&gt;'</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">, </span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF;" data-token-type="string">'Port number'</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">, </span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF;" data-token-type="string">'4000'</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">)</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">  .</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function">action</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">((</span><span style="--shiki-light:#E36209;--shiki-dark:#FFAB70;" data-token-type="important">options</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">) </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword">=&gt;</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation"> {</span></span>
+<span data-line=""><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword">    const</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="value"> builder</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="operator"> =</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword"> new</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function"> SiteBuilder</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">(</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF;" data-token-type="string">'.'</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">, </span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF;" data-token-type="string">'_site'</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">);</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal">    builder.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function">build</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">();</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">    </span></span>
+<span data-line=""><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D;" data-token-type="comment">    // 启动服务器</span></span>
+<span data-line=""><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword">    const</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="value"> express</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="operator"> =</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function"> require</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">(</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF;" data-token-type="string">'express'</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">);</span></span>
+<span data-line=""><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword">    const</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="value"> app</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="operator"> =</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function"> express</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">();</span></span>
+<span data-line=""><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword">    const</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="value"> port</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="operator"> =</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal"> options.port;</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">    </span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal">    app.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function">use</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal">(express.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function">static</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">(</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF;" data-token-type="string">'_site'</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">));</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal">    app.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function">listen</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal">(port, () </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword">=&gt;</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation"> {</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal">      console.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function">log</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">(</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF;" data-token-type="string">`Server running at http://localhost:${</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal">port</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF;" data-token-type="keyword">}`</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">);</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">    });</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">  });</span></span>
+<span data-line=""> </span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal">commander.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function">parse</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal">(process.argv);</span></span></code></pre></figure>
+
+
+    <h2 id="4-高级功能实现">4. 高级功能实现</h2>
+
+
+    <h3 id="41-插件系统">4.1 插件系统</h3>
+
+
+    <p>实现一个简单的插件系统，允许扩展框架功能：</p>
+
+
+    <figure data-rehype-pretty-code-figure=""><pre tabindex="0" data-language="javascript" data-theme="github-light github-dark"><code data-language="javascript" data-theme="github-light github-dark" style="display:grid;"><span data-line=""><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D;" data-token-type="comment">// 插件系统示例</span></span>
+<span data-line=""><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword">class</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="property"> PluginSystem</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation"> {</span></span>
+<span data-line=""><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword">  constructor</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">() {</span></span>
+<span data-line=""><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="value">    this</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">.plugins </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="operator">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation"> [];</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">  }</span></span>
+<span data-line=""> </span>
+<span data-line=""><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D;" data-token-type="comment">  // 加载插件</span></span>
+<span data-line=""><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function">  loadPlugins</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">(</span><span style="--shiki-light:#E36209;--shiki-dark:#FFAB70;" data-token-type="important">pluginsDir</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">) {</span></span>
+<span data-line=""><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D;" data-token-type="comment">    // 扫描插件目录并加载插件</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">  }</span></span>
+<span data-line=""> </span>
+<span data-line=""><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D;" data-token-type="comment">  // 触发钩子</span></span>
+<span data-line=""><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function">  triggerHook</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">(</span><span style="--shiki-light:#E36209;--shiki-dark:#FFAB70;" data-token-type="important">hookName</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">, </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="operator">...</span><span style="--shiki-light:#E36209;--shiki-dark:#FFAB70;" data-token-type="important">args</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">) {</span></span>
+<span data-line=""><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="value">    this</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">.plugins.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function">forEach</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">(</span><span style="--shiki-light:#E36209;--shiki-dark:#FFAB70;" data-token-type="important">plugin</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword"> =&gt;</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation"> {</span></span>
+<span data-line=""><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword">      if</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal"> (plugin[hookName]) {</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal">        plugin[hookName](</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="operator">...</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal">args);</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">      }</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">    });</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">  }</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">}</span></span></code></pre></figure>
+
+
+    <h3 id="42-数据文件处理">4.2 数据文件处理</h3>
+
+
+    <p>支持 <code>_data</code> 目录中的数据文件：</p>
+
+
+    <figure data-rehype-pretty-code-figure=""><pre tabindex="0" data-language="javascript" data-theme="github-light github-dark"><code data-language="javascript" data-theme="github-light github-dark" style="display:grid;"><span data-line=""><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D;" data-token-type="comment">// 数据文件处理示例</span></span>
+<span data-line=""><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword">class</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="property"> DataProcessor</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation"> {</span></span>
+<span data-line=""><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword">  constructor</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">(</span><span style="--shiki-light:#E36209;--shiki-dark:#FFAB70;" data-token-type="important">dataDir</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">) {</span></span>
+<span data-line=""><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="value">    this</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">.dataDir </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="operator">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal"> dataDir;</span></span>
+<span data-line=""><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="value">    this</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">.data </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="operator">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation"> {};</span></span>
+<span data-line=""><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="value">    this</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function">loadData</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">();</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">  }</span></span>
+<span data-line=""> </span>
+<span data-line=""><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D;" data-token-type="comment">  // 加载数据文件</span></span>
+<span data-line=""><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function">  loadData</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">() {</span></span>
+<span data-line=""><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword">    if</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;"> (</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="operator">!</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal">fs.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function">existsSync</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">(</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="value">this</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">.dataDir)) {</span></span>
+<span data-line=""><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword">      return</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">;</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">    }</span></span>
+<span data-line=""> </span>
+<span data-line=""><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="value">    this</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">.fileSystem.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function">walk</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">(</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="value">this</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">.dataDir, (</span><span style="--shiki-light:#E36209;--shiki-dark:#FFAB70;" data-token-type="important">filePath</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">) </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword">=&gt;</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation"> {</span></span>
+<span data-line=""><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword">      const</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="value"> fileName</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="operator"> =</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal"> path.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function">basename</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal">(filePath, path.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function">extname</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal">(filePath));</span></span>
+<span data-line=""><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword">      const</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="value"> content</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="operator"> =</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="value"> this</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">.fileSystem.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function">readFile</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal">(filePath);</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">      </span></span>
+<span data-line=""><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword">      if</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal"> (filePath.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function">endsWith</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">(</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF;" data-token-type="string">'.yml'</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">) </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="operator">||</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal"> filePath.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function">endsWith</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">(</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF;" data-token-type="string">'.yaml'</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">)) {</span></span>
+<span data-line=""><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="value">        this</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">.data[fileName] </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="operator">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal"> yaml.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function">load</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal">(content);</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">      } </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword">else</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword"> if</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal"> (filePath.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function">endsWith</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">(</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF;" data-token-type="string">'.json'</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">)) {</span></span>
+<span data-line=""><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="value">        this</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">.data[fileName] </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="operator">=</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="value"> JSON</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function">parse</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal">(content);</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">      }</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">    });</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">  }</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">}</span></span></code></pre></figure>
+
+
+    <h3 id="43-增量构建">4.3 增量构建</h3>
+
+
+    <p>实现增量构建，提高构建速度：</p>
+
+
+    <figure data-rehype-pretty-code-figure=""><pre tabindex="0" data-language="javascript" data-theme="github-light github-dark"><code data-language="javascript" data-theme="github-light github-dark" style="display:grid;"><span data-line=""><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D;" data-token-type="comment">// 增量构建示例</span></span>
+<span data-line=""><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword">class</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="property"> IncrementalBuilder</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation"> {</span></span>
+<span data-line=""><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword">  constructor</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">() {</span></span>
+<span data-line=""><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="value">    this</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">.lastBuildTime </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="operator">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation"> {};</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">  }</span></span>
+<span data-line=""> </span>
+<span data-line=""><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D;" data-token-type="comment">  // 检查文件是否需要重新构建</span></span>
+<span data-line=""><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function">  needsRebuild</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">(</span><span style="--shiki-light:#E36209;--shiki-dark:#FFAB70;" data-token-type="important">filePath</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">) {</span></span>
+<span data-line=""><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword">    const</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="value"> stat</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="operator"> =</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal"> fs.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function">statSync</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal">(filePath);</span></span>
+<span data-line=""><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword">    const</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="value"> mtime</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="operator"> =</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal"> stat.mtime.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function">getTime</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">();</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">    </span></span>
+<span data-line=""><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword">    if</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;"> (</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="operator">!</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="value">this</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">.lastBuildTime[filePath] </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="operator">||</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal"> mtime </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="operator">&gt;</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="value"> this</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">.lastBuildTime[filePath]) {</span></span>
+<span data-line=""><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="value">      this</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">.lastBuildTime[filePath] </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="operator">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal"> mtime;</span></span>
+<span data-line=""><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword">      return</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="value"> true</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">;</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">    }</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">    </span></span>
+<span data-line=""><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword">    return</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="value"> false</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">;</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">  }</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">}</span></span></code></pre></figure>
+
+
+    <h2 id="5-性能优化策略">5. 性能优化策略</h2>
+
+
+    <h3 id="51-构建性能">5.1 构建性能</h3>
+
+
+    <ul>
+<li><strong>并行处理</strong>：使用多线程或异步操作处理文件</li>
+<li><strong>缓存机制</strong>：缓存已处理的文件，避免重复处理</li>
+<li><strong>增量构建</strong>：只处理修改过的文件</li>
+<li><strong>文件系统监控</strong>：使用 chokidar 等库监控文件变化</li>
+</ul>
+
+
+    <h3 id="52-运行时性能">5.2 运行时性能</h3>
+
+
+    <ul>
+<li><strong>静态资源优化</strong>：压缩 CSS、JavaScript、图片</li>
+<li><strong>代码分割</strong>：按需加载 JavaScript</li>
+<li><strong>预加载</strong>：使用 preload 和 prefetch 优化资源加载</li>
+<li><strong>CDN 集成</strong>：使用 CDN 加速静态资源</li>
+</ul>
+
+
+    <h2 id="6-测试与调试">6. 测试与调试</h2>
+
+
+    <h3 id="61-单元测试">6.1 单元测试</h3>
+
+
+    <p>为核心模块编写单元测试：</p>
+
+
+    <figure data-rehype-pretty-code-figure=""><pre tabindex="0" data-language="javascript" data-theme="github-light github-dark"><code data-language="javascript" data-theme="github-light github-dark" style="display:grid;"><span data-line=""><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D;" data-token-type="comment">// 单元测试示例（使用 Jest）</span></span>
+<span data-line=""><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function">test</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">(</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF;" data-token-type="string">'ContentProcessor 应该正确解析 Front Matter'</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">, () </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword">=&gt;</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation"> {</span></span>
+<span data-line=""><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword">  const</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="value"> processor</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="operator"> =</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword"> new</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function"> ContentProcessor</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">();</span></span>
+<span data-line=""><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword">  const</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="value"> content</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="operator"> =</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF;" data-token-type="string"> '---</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="string">\n</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF;" data-token-type="string">title: Test</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="string">\n</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF;" data-token-type="string">---</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="string">\n</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF;" data-token-type="string">Content'</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">;</span></span>
+<span data-line=""><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword">  const</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="value"> result</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="operator"> =</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal"> processor.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function">parseFrontMatter</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal">(content);</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">  </span></span>
+<span data-line=""><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function">  expect</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal">(result.frontMatter.title).</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function">toBe</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">(</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF;" data-token-type="string">'Test'</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">);</span></span>
+<span data-line=""><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function">  expect</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal">(result.content).</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function">toBe</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">(</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF;" data-token-type="string">'Content'</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">);</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">});</span></span></code></pre></figure>
+
+
+    <h3 id="62-集成测试">6.2 集成测试</h3>
+
+
+    <p>测试完整的构建流程：</p>
+
+
+    <figure data-rehype-pretty-code-figure=""><pre tabindex="0" data-language="javascript" data-theme="github-light github-dark"><code data-language="javascript" data-theme="github-light github-dark" style="display:grid;"><span data-line=""><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D;" data-token-type="comment">// 集成测试示例</span></span>
+<span data-line=""><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function">test</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">(</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF;" data-token-type="string">'SiteBuilder 应该正确构建站点'</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">, () </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword">=&gt;</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation"> {</span></span>
+<span data-line=""><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword">  const</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="value"> builder</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="operator"> =</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;" data-token-type="keyword"> new</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function"> SiteBuilder</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">(</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF;" data-token-type="string">'./test-site'</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">, </span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF;" data-token-type="string">'./test-output'</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">);</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal">  builder.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function">build</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">();</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">  </span></span>
+<span data-line=""><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D;" data-token-type="comment">  // 检查输出文件是否存在</span></span>
+<span data-line=""><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function">  expect</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="normal">(fs.</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function">existsSync</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">(</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF;" data-token-type="string">'./test-output/index.html'</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">)).</span><span style="--shiki-light:#6F42C1;--shiki-dark:#B392F0;" data-token-type="function">toBe</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">(</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="value">true</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">);</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">});</span></span></code></pre></figure>
+
+
+    <h2 id="7-部署与发布">7. 部署与发布</h2>
+
+
+    <h3 id="71-本地部署">7.1 本地部署</h3>
+
+
+    <ul>
+<li><strong>构建命令</strong>：<code>your-framework build</code></li>
+<li><strong>本地服务器</strong>：<code>your-framework serve</code></li>
+<li><strong>部署到 GitHub Pages</strong>：推送到 gh-pages 分支</li>
+</ul>
+
+
+    <h3 id="72-持续集成">7.2 持续集成</h3>
+
+
+    <p>配置 CI/CD 流程，自动构建和部署：</p>
+
+
+    <figure data-rehype-pretty-code-figure=""><pre tabindex="0" data-language="yaml" data-theme="github-light github-dark"><code data-language="yaml" data-theme="github-light github-dark" style="display:grid;"><span data-line=""><span style="--shiki-light:#6A737D;--shiki-dark:#6A737D;" data-token-type="comment"># GitHub Actions 配置示例</span></span>
+<span data-line=""><span style="--shiki-light:#22863A;--shiki-dark:#85E89D;" data-token-type="tag">name</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">: </span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF;" data-token-type="string">Build and Deploy</span></span>
+<span data-line=""> </span>
+<span data-line=""><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;" data-token-type="value">on</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">: [</span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF;" data-token-type="string">push</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">]</span></span>
+<span data-line=""> </span>
+<span data-line=""><span style="--shiki-light:#22863A;--shiki-dark:#85E89D;" data-token-type="tag">jobs</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">:</span></span>
+<span data-line=""><span style="--shiki-light:#22863A;--shiki-dark:#85E89D;" data-token-type="tag">  build</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">:</span></span>
+<span data-line=""><span style="--shiki-light:#22863A;--shiki-dark:#85E89D;" data-token-type="tag">    runs-on</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">: </span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF;" data-token-type="string">ubuntu-latest</span></span>
+<span data-line=""><span style="--shiki-light:#22863A;--shiki-dark:#85E89D;" data-token-type="tag">    steps</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">:</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">      - </span><span style="--shiki-light:#22863A;--shiki-dark:#85E89D;" data-token-type="tag">uses</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">: </span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF;" data-token-type="string">actions/checkout@v2</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">      - </span><span style="--shiki-light:#22863A;--shiki-dark:#85E89D;" data-token-type="tag">name</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">: </span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF;" data-token-type="string">Set up Node.js</span></span>
+<span data-line=""><span style="--shiki-light:#22863A;--shiki-dark:#85E89D;" data-token-type="tag">        uses</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">: </span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF;" data-token-type="string">actions/setup-node@v2</span></span>
+<span data-line=""><span style="--shiki-light:#22863A;--shiki-dark:#85E89D;" data-token-type="tag">        with</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">:</span></span>
+<span data-line=""><span style="--shiki-light:#22863A;--shiki-dark:#85E89D;" data-token-type="tag">          node-version</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">: </span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF;" data-token-type="string">'14'</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">      - </span><span style="--shiki-light:#22863A;--shiki-dark:#85E89D;" data-token-type="tag">name</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">: </span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF;" data-token-type="string">Install dependencies</span></span>
+<span data-line=""><span style="--shiki-light:#22863A;--shiki-dark:#85E89D;" data-token-type="tag">        run</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">: </span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF;" data-token-type="string">npm install</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">      - </span><span style="--shiki-light:#22863A;--shiki-dark:#85E89D;" data-token-type="tag">name</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">: </span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF;" data-token-type="string">Build site</span></span>
+<span data-line=""><span style="--shiki-light:#22863A;--shiki-dark:#85E89D;" data-token-type="tag">        run</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">: </span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF;" data-token-type="string">npm run build</span></span>
+<span data-line=""><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">      - </span><span style="--shiki-light:#22863A;--shiki-dark:#85E89D;" data-token-type="tag">name</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">: </span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF;" data-token-type="string">Deploy to GitHub Pages</span></span>
+<span data-line=""><span style="--shiki-light:#22863A;--shiki-dark:#85E89D;" data-token-type="tag">        uses</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">: </span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF;" data-token-type="string">peaceiris/actions-gh-pages@v3</span></span>
+<span data-line=""><span style="--shiki-light:#22863A;--shiki-dark:#85E89D;" data-token-type="tag">        with</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">:</span></span>
+<span data-line=""><span style="--shiki-light:#22863A;--shiki-dark:#85E89D;" data-token-type="tag">          github_token</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">: </span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF;" data-token-type="string">${{ secrets.GITHUB_TOKEN }}</span></span>
+<span data-line=""><span style="--shiki-light:#22863A;--shiki-dark:#85E89D;" data-token-type="tag">          publish_dir</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;" data-token-type="punctuation">: </span><span style="--shiki-light:#032F62;--shiki-dark:#9ECBFF;" data-token-type="string">./_site</span></span></code></pre></figure>
+
+
+    <h2 id="8-总结">8. 总结</h2>
+
+
+    <p>构建一个类似 Jekyll 的静态站点生成器需要以下核心组件：</p>
+
+
+    <ol>
+<li><strong>文件系统模块</strong>：处理文件的读取、写入和遍历</li>
+<li><strong>内容处理模块</strong>：解析 Front Matter、转换 Markdown、处理模板</li>
+<li><strong>站点构建模块</strong>：协调整个构建过程，生成静态文件</li>
+<li><strong>命令行界面</strong>：提供用户交互接口</li>
+<li><strong>插件系统</strong>：支持功能扩展</li>
+</ol>
+
+
+    <p>通过本文提供的代码示例和设计思路，您可以构建一个功能完整的静态站点生成器。随着功能的不断完善，您可以添加更多高级特性，如主题系统、国际化支持、搜索功能等。</p>
+
+
+    <p>静态站点生成器的核心价值在于将内容与表现分离，让开发者专注于内容创作，同时生成高性能的静态网站。无论是个人博客、文档站点还是企业网站，静态站点生成器都能提供简单而有效的解决方案。</p>
+
+
+    <p><a href="https://www.jekyll.com.cn/docs/" class="external external-link">jekyll 中文文档</a></p></article>
+    <div class="note-end"><a href="/">← 返回全部笔记</a><span>持续学习，持续整理。</span></div>
+  </main>
+</body>
+</html>
