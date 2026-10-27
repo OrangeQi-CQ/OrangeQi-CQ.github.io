@@ -63,9 +63,14 @@ for (const file of (await walk(notesRoot)).sort()) {
     .trim();
   notes.push({ title, topic, date, updated, summary, tags, path: relativePath, featured: readMeta(html, 'note:featured') === 'true', content: textContent });
 
-  const legacyPath = readMeta(html, 'note:path').replaceAll('\\', '/');
-  if (legacyPath && legacyPath !== relativePath && !legacyPath.startsWith('/') && !legacyPath.split('/').includes('..')) {
-    aliases.push({ legacyPath, targetPath: `notes/${relativePath}` });
+  const legacyPaths = [
+    readMeta(html, 'note:path'),
+    ...readMeta(html, 'note:aliases').split(',').map((path) => path.trim()),
+  ];
+  for (const path of new Set(legacyPaths.map((value) => value.replaceAll('\\', '/')))) {
+    if (path && !path.startsWith('/') && !path.split('/').includes('..')) {
+      aliases.push({ legacyPath: path, targetPath: `notes/${relativePath}` });
+    }
   }
 }
 
