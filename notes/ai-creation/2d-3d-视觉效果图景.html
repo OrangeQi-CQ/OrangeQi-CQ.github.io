@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="系统梳理 2D/3D 视觉效果的创作图景：three.js、Remotion、Blender 与 Unity 各自解决什么问题、核心概念是什么、如何选型与组合成一条完整的生产管线。">
+  <meta name="note:title" content="2D/3D 视觉效果图景：three.js、Remotion、Blender 与 Unity">
+  <meta name="note:topic" content="ai-creation">
+  <meta name="note:date" content="2026-10-30">
+  <meta name="note:updated" content="2026-10-30">
+  <meta name="note:summary" content="系统梳理 2D/3D 视觉效果的创作图景：three.js、Remotion、Blender 与 Unity 各自解决什么问题、核心概念是什么、如何选型与组合成一条完整的生产管线。">
+  <meta name="note:tags" content="threejs, remotion, blender, unity, webgl, 可视化, 游戏引擎">
+
+  <title>2D/3D 视觉效果图景：three.js、Remotion、Blender 与 Unity | OrangeQi 知识库</title>
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/assets/site.css">
+</head>
+<body class="article-page">
+  <header class="site-header">
+    <a class="brand" href="/" aria-label="OrangeQi 知识库首页"><span class="brand-mark" aria-hidden="true">O</span><span class="brand-name">OrangeQi <span>知识库</span></span></a>
+    <nav class="header-nav" aria-label="主导航"><a href="/">返回笔记库 <span aria-hidden="true">↗</span></a></nav>
+  </header>
+  <main class="note-page">
+    <nav class="note-breadcrumbs" aria-label="面包屑"><a href="/">笔记库</a><span>/</span><span>AI 创作</span><span>/</span><span>2D/3D 视觉效果图景</span></nav>
+    <header class="note-header"><p class="note-eyebrow">AI 创作 / NOTE</p><h1>2D/3D 视觉效果图景：three.js、Remotion、Blender 与 Unity</h1><p class="note-deck">想做出好看的 2D/3D 视觉效果，可选项散落在网页、视频、游戏三个领域。这篇笔记先把整张地图画出来，再逐个拆解 three.js、Remotion、Blender、Unity 四个代表性框架的定位与核心概念，最后给出选型对照和学习路径。</p><div class="note-byline"><span class="note-date-item">更新 <time datetime="2026-10-30">2026-10-30</time></span><span class="note-date-item">记录 <time datetime="2026-10-30">2026-10-30</time></span></div></header>
+    <article class="note-content">
+      <p>网页上的 3D 展示、一段数据驱动的动画视频、一个 2D 或 3D 游戏——看起来是三件不同的事，但底层其实是同一套知识：<strong>用数学描述形状，用光照模型计算颜色，按时间轴驱动变化，最后由渲染器把这一切变成像素</strong>。差别只在于"每帧渲染要花多少时间"和"观众能不能干预"。</p>
+
+      <h2 id="先建立地图两条渲染管线">先建立地图：两条渲染管线</h2>
+      <p>所有视觉创作工具都能放进这张地图里，判断标准就一个：<strong>渲染一帧允许花多长时间</strong>。</p>
+      <table>
+        <thead>
+          <tr><th scope="col">管线</th><th scope="col">特征</th><th scope="col">典型输出</th><th scope="col">代表工具</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>实时渲染</strong></td><td>每帧预算约 16ms（60fps），牺牲画质换速度，光照用近似算法</td><td>网页、游戏、互动装置、XR</td><td>three.js、Babylon.js、Unity、Unreal、Godot</td></tr>
+          <tr><td><strong>离线渲染</strong></td><td>一帧可以算几秒到几小时，用物理精确的光线追踪</td><td>影视动画、广告、片头</td><td>Blender (Cycles)、Arnold、RenderMan</td></tr>
+          <tr><td><strong>程序化视频</strong></td><td>介于两者之间：逐帧截取浏览器/引擎画面再合成视频，帧确定性</td><td>数据动画、节目包装、自动化视频</td><td>Remotion、Motion Canvas</td></tr>
+        </tbody>
+      </table>
+      <p>第二个判断标准是<strong>素材从哪来</strong>：美术资产（模型、贴图、绑定）主要靠 DCC 工具（Blender、Maya、C4D）制作，再通过 glTF/FBX 等格式流入渲染端；而 three.js、Remotion 这类代码驱动工具的长处是<strong>让程序参数直接决定视觉</strong>。两条路通常是组合使用的。</p>
+
+      <h2 id="threejs网页里的3d世界">three.js：网页里的 3D 世界</h2>
+      <p><a href="https://threejs.org/" class="external external-link">three.js</a> 是对 WebGL（以及新一代 WebGPU）的场景图封装，是网页 3D 事实上的标准。它不提供游戏逻辑，只负责"把 3D 场景画出来"这一件事，因此格外适合做产品展示、数据可视化和创意网页。</p>
+      <h3 id="核心对象模型">核心对象模型</h3>
+      <ul>
+        <li><strong>Scene / Camera / Renderer</strong>：三件套是每个程序的起点——场景装物体，相机定视角，渲染器逐帧把场景画到 canvas 上。</li>
+        <li><strong>Mesh = Geometry + Material</strong>：几何体描述形状（Box、Sphere，或加载 glTF 模型），材质描述表面（颜色、金属度、粗糙度、贴图）。</li>
+        <li><strong>Light</strong>：环境光、方向光、点光源；实时渲染的光照是近似算法（PBR 着色模型），和离线渲染的物理精确路径追踪不同。</li>
+        <li><strong>动画循环</strong>：用 <code>requestAnimationFrame</code> 驱动，每帧更新物体状态后重新渲染。</li>
+      </ul>
+      <pre><code class="language-js">import * as THREE from 'three';
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(75, innerWidth / innerHeight, 0.1, 100);
+camera.position.z = 5;
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(innerWidth, innerHeight);
+document.body.appendChild(renderer.domElement);
+
+const cube = new THREE.Mesh(
+  new THREE.BoxGeometry(1, 1, 1),
+  new THREE.MeshStandardMaterial({ color: 0x4a9d6e, roughness: 0.4 })
+);
+scene.add(cube);
+scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+const key = new THREE.DirectionalLight(0xffffff, 1.5);
+key.position.set(3, 4, 5);
+scene.add(key);
+
+function animate(t) {
+  cube.rotation.y = t / 1000;
+  renderer.render(scene, camera);
+  requestAnimationFrame(animate);
+}
+requestAnimationFrame(animate);</code></pre>
+      <h3 id="生态与进阶">生态与进阶</h3>
+      <ul>
+        <li><strong><a href="https://r3f.docs.pmnd.rs/" class="external external-link">React Three Fiber</a></strong>：把 three.js 变成 React 组件，声明式搭场景，配 <code>drei</code> 工具库（相机控制、加载器、环境贴图开箱即用）。</li>
+        <li><strong>后期处理</strong>：泛光、景深、色调映射，通过 EffectComposer 叠加，网页 3D 的"高级感"一半来自这里。</li>
+        <li><strong>TSL / WebGPU</strong>：three.js 正在向 WebGPU 迁移，节点式着色语言 TSL 让自定义着色器可以同时编译到 WebGL 和 WebGPU。</li>
+        <li>同赛道替代品：<a href="https://www.babylonjs.com/" class="external external-link">Babylon.js</a>（更全家桶，内置物理与 GUI）、<code>&lt;model-viewer&gt;</code>（零代码展示 glTF 产品模型）。</li>
+      </ul>
+
+      <h2 id="remotion用react写视频">Remotion：用 React 写视频</h2>
+      <p><a href="https://www.remotion.dev/" class="external external-link">Remotion</a> 的核心洞见是：<strong>视频就是"以帧号为参数的纯函数"</strong>——第 n 帧画面 = f(n)，没有任何隐藏状态。这让它天然适合程序化生成：参数化模板、批量产出、AI 流水线接入都很顺。</p>
+      <h3 id="核心概念">核心概念</h3>
+      <ul>
+        <li><strong>Composition</strong>：一段视频的声明，定义宽高、帧率、时长和入口组件。</li>
+        <li><strong>useCurrentFrame()</strong>：拿到当前帧号，一切动画都从它推导，保证任意一帧可以独立重算、结果一致。</li>
+        <li><strong>interpolate / spring</strong>：帧号到数值的插值和物理弹簧动画，代替传统时间轴。</li>
+        <li><strong>Sequence</strong>：把组件按时间排列，相当于图层 + 时间轴的代码版。</li>
+      </ul>
+      <pre><code class="language-tsx">import { useCurrentFrame, interpolate, spring } from 'remotion';
+
+const Title: React.FC = () =&gt; {
+  const frame = useCurrentFrame();
+  const scale = spring({ frame, fps: 30, config: { damping: 12 } });
+  const opacity = interpolate(frame, [10, 30], [0, 1], {
+    extrapolateRight: 'clamp',
+  });
+  return &lt;h1 style={{ transform: `scale(${scale})`, opacity }}&gt;Hello&lt;/h1&gt;;
+};</code></pre>
+      <h3 id="渲染管线">渲染管线</h3>
+      <p>渲染时 Remotion 用 headless Chrome 打开页面，按帧号逐帧截图，再交给 ffmpeg 合成 mp4。这就是"帧确定性"的价值：可以分布式并行渲染任意帧。局限也在这里——它是 2D/网页技术栈，做不了影视级 3D，但可以嵌 three.js 场景把 3D 内容烘进视频。典型用途：数据新闻动画、课程/讲座视频、GitHub 年报式个人化视频、批量生成的短视频模板。</p>
+
+      <h2 id="blender开源3d全流程">Blender：开源 3D 全流程</h2>
+      <p><a href="https://www.blender.org/" class="external external-link">Blender</a> 不是渲染库，而是完整的 3D 内容创作软件：建模、雕刻、材质、灯光、绑定、动画、合成、剪辑全在一个应用里，且完全免费开源。它在管线里的角色是<strong>美术资产的源头</strong>。</p>
+      <h3 id="主要能力模块">主要能力模块</h3>
+      <ul>
+        <li><strong>建模</strong>：多边形建模是基本功；雕塑模式做有机形体；<strong>几何节点（Geometry Nodes）</strong>用节点图程序化生成几何体，撒树、做城市、生成晶格结构效率极高。</li>
+        <li><strong>材质与灯光</strong>：基于节点的 PBR 着色器，物理正确。</li>
+        <li><strong>渲染器</strong>：<strong>Eevee</strong> 是实时光栅化（接近游戏引擎，交互预览快）；<strong>Cycles</strong> 是路径追踪离线渲染（物理精确，影视级画质，慢）。</li>
+        <li><strong>绑定与动画</strong>：骨骼、反向动力学、形状键、非线性动画。</li>
+        <li><strong>Python (bpy)</strong>：整个 Blender 可被 Python 驱动，写脚本批量建模、自动化渲染农场、程序化生成资产。</li>
+      </ul>
+      <h3 id="在协作管线里的位置">在协作管线里的位置</h3>
+      <ul>
+        <li>导出 <strong>glTF</strong> 给网页（three.js / Babylon.js）和移动端——这是 Blender 到实时管线的标准通道；</li>
+        <li>导出 FBX/USD 给 Unity、Unreal；</li>
+        <li>直接用 Cycles 渲染成片，或输出序列帧进 DaVinci/AE 合成。</li>
+      </ul>
+      <p>对程序员最友好的切入方式往往是反过来的：先学"怎么把模型导进 three.js"，再逐步回溯学建模与材质。</p>
+
+      <h2 id="unity实时引擎与游戏">Unity：实时引擎与游戏</h2>
+      <p><a href="https://unity.com/" class="external external-link">Unity</a> 是商业实时引擎，three.js 只管"画"，Unity 管"整个交互产品"：渲染、物理、输入、音频、UI、资源管理、跨平台打包（PC/主机/移动/WebGL/XR）。2D 和 3D 都是第一公民。</p>
+      <h3 id="架构与工作流">架构与工作流</h3>
+      <ul>
+        <li><strong>GameObject / Component</strong>：场景中一切皆 GameObject，行为靠挂组件（Transform、Renderer、Collider、自定义 C# 脚本），组合优于继承的设计。</li>
+        <li><strong>C# 脚本</strong>：生命周期由引擎回调（<code>Start</code>、<code>Update</code>、<code>OnCollisionEnter</code> 等），<code>Update</code> 每帧执行，相当于游戏版的动画循环。</li>
+        <li><strong>2D 工作流</strong>：Sprite、Tilemap、2D 物理引擎，像素游戏和横版游戏开箱即用。</li>
+        <li><strong>渲染管线</strong>：URP（通用，性能与画质均衡，移动端首选）与 HDRP（高端，电影级）；<strong>Shader Graph</strong> 用节点编辑器写着色器，不用手写 HLSL。</li>
+        <li><strong>Timeline / Cinemachine</strong>：引擎内做镜头语言和实时过场，也常被用来拍"实时渲染电影"。</li>
+      </ul>
+      <pre><code class="language-csharp">using UnityEngine;
+
+public class Rotator : MonoBehaviour
+{
+    [SerializeField] private float speed = 90f;
+
+    private void Update()
+    {
+        transform.Rotate(Vector3.up, speed * Time.deltaTime);
+    }
+}</code></pre>
+      <p>同赛道对比：<strong>Unreal</strong> 画质上限更高（Nanite/Lumen）、主攻 3D 大型项目与影视虚拟制片；<strong>Godot</strong> 开源轻量、2D 体验极佳，适合独立游戏。三者在"个人系统学习"语境下选 Unity 或 Godot 起步都合理。</p>
+
+      <h2 id="选型对照表">选型对照表</h2>
+      <table>
+        <thead>
+          <tr><th scope="col">需求</th><th scope="col">推荐路径</th><th scope="col">说明</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>网页轻量 2D 动效</td><td>CSS / SVG / GSAP</td><td>UI 动效、滚动叙事，不必上 canvas</td></tr>
+          <tr><td>网页 2D 程序化图形</td><td>Canvas 2D / p5.js / D3</td><td>生成艺术、数据可视化</td></tr>
+          <tr><td>网页 3D 展示与交互</td><td>three.js (+ R3F)</td><td>产品展示、创意站、3D 可视化</td></tr>
+          <tr><td>程序化 / 批量视频</td><td>Remotion</td><td>数据动画、模板化短视频、AI 管线</td></tr>
+          <tr><td>3D 模型与美术资产</td><td>Blender</td><td>建模、烘焙、导出 glTF 给实时管线</td></tr>
+          <tr><td>影视级 3D 动画短片</td><td>Blender (Cycles) + 合成软件</td><td>离线渲染，画质优先</td></tr>
+          <tr><td>2D 游戏</td><td>Godot / Unity 2D / Cocos</td><td>Godot 开源轻量，Unity 生态广</td></tr>
+          <tr><td>3D 游戏 / XR / 数字孪生</td><td>Unity (URP) / Unreal</td><td>完整引擎能力 + 跨平台发布</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="学习路径建议">学习路径建议</h2>
+      <ol>
+        <li><strong>three.js 先行，建立渲染直觉</strong>：场景图、相机、材质、光照这套概念在所有 3D 工具里通用。官方文档的 "Fundamentals" 章节加 Bruno Simon 的 <a href="https://threejs-journey.com/" class="external external-link">Three.js Journey</a> 是公认最佳入门。目标：在网页里摆出一个有光影、可交互的场景。</li>
+        <li><strong>Remotion 快速出可见成果</strong>：会 React 就能上手，一两天做出一条参数化视频，正反馈最强。顺带理解"帧确定性"这一程序化视频的核心思想。</li>
+        <li><strong>Blender 补美术管线</strong>：从多边形建模开始，再学材质和烘焙；重点不是成为美术，而是理解资产如何生产并导出 glTF，与 three.js/Unity 打通。经典教程：Blender Guru 的甜甜圈系列。</li>
+        <li><strong>Unity 做完整交互项目</strong>：官方 Learn 路径（如 Junior Programmer）加一个小而完整的 2D 游戏再转 3D，把物理、输入、UI、打包全链路走一遍。</li>
+      </ol>
+      <p>四个工具共同的地基是三块：<strong>线性代数</strong>（向量、矩阵、四元数——相机与变换的语言）、<strong>PBR 渲染原理</strong>（为什么金属度和粗糙度决定质感）、<strong>关键帧与缓动</strong>（一切动画的本质）。地基打牢后，换任何工具都只是换语法。</p>
+    </article>
+  </main>
+</body>
+</html>

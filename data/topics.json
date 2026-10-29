@@ -13,10 +13,7 @@
     {"id":"llm-algorithms","domain":"computer-tech","label":"大模型算法","notesPath":"computer-tech/llm-algorithms"},
     {"id":"algorithm-practice","domain":"computer-tech","label":"算法竞赛","notesPath":"computer-tech/algorithm-practice","supplemental":true},
     {"id":"engineering-tools","domain":"computer-tech","label":"开发工具","notesPath":"computer-tech/engineering-tools","supplemental":true},
-    {"id":"web-frontend","domain":"ai-creation","label":"Web 前端","notesPath":"ai-creation/web-frontend"},
-    {"id":"ai-video","domain":"ai-creation","label":"AI 视频","notesPath":"ai-creation/ai-video"},
-    {"id":"ai-editing","domain":"ai-creation","label":"AI 剪辑","notesPath":"ai-creation/ai-editing"},
-    {"id":"ai-games","domain":"ai-creation","label":"AI 游戏","notesPath":"ai-creation/ai-games"},
+    {"id":"ai-creation","domain":"ai-creation","label":"AI 创作","notesPath":"ai-creation"},
     {"id":"finance","domain":"finance","label":"金融与商业","notesPath":"finance"}
   ]
 }
