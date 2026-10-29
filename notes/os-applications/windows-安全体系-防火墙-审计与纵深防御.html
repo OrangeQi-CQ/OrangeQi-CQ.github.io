@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="系统梳理 Windows 安全体系：从信任根与虚拟化安全到访问控制、防火墙、Defender、应用控制、审计与事件日志，形成一张可以按层查阅的地图。">
+  <meta name="note:title" content="Windows 安全体系全景：信任根、防火墙、审计与纵深防御">
+  <meta name="note:topic" content="os-applications">
+  <meta name="note:date" content="2026-10-30">
+  <meta name="note:updated" content="2026-10-30">
+  <meta name="note:summary" content="系统梳理 Windows 安全体系：从信任根与虚拟化安全到访问控制、防火墙、Defender、应用控制、审计与事件日志，形成一张可以按层查阅的地图。">
+  <meta name="note:tags" content="windows, security, firewall, audit, defense-in-depth">
+  <meta name="note:featured" content="true">
+
+  <title>Windows 安全体系全景：信任根、防火墙、审计与纵深防御 | OrangeQi 知识库</title>
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/assets/site.css">
+</head>
+<body class="article-page">
+  <header class="site-header">
+    <a class="brand" href="/" aria-label="OrangeQi 知识库首页"><span class="brand-mark" aria-hidden="true">O</span><span class="brand-name">OrangeQi <span>知识库</span></span></a>
+    <nav class="header-nav" aria-label="主导航"><a href="/">返回笔记库 <span aria-hidden="true">↗</span></a></nav>
+  </header>
+  <main class="note-page">
+    <nav class="note-breadcrumbs" aria-label="面包屑"><a href="/">笔记库</a><span>/</span><span>操作系统应用</span><span>/</span><span>Windows 安全体系全景</span></nav>
+    <header class="note-header"><p class="note-eyebrow">操作系统应用 / NOTE</p><h1>Windows 安全体系全景：信任根、防火墙、审计与纵深防御</h1><p class="note-deck">Windows 的安全不是某一个开关，而是从硬件信任根到审计日志的一叠同心圆。这篇笔记按“启动信任链 → 账户与访问控制 → 网络边界 → 恶意代码防御 → 应用控制 → 审计取证”的顺序，把整个体系串成一张可以按层查阅的地图。</p><div class="note-byline"><span class="note-date-item">更新 <time datetime="2026-10-30">2026-10-30</time></span><span class="note-date-item">记录 <time datetime="2026-10-30">2026-10-30</time></span></div></header>
+    <article class="note-content">
+      <p>讨论 Windows 安全时常见的误区是只盯着“防火墙”或“杀毒软件”。实际上 Windows 的安全体系是纵深防御（Defense in Depth）：每一层都假设上一层可能失守。理解体系的关键在于认清各层的位置和相互依赖，而不是记住每个开关的位置。本文以 Windows 10/11 与 Server 2016+ 为基准。</p>
+
+      <h2 id="总览-六层纵深防御">总览：六层纵深防御</h2>
+      <table>
+        <thead>
+          <tr><th scope="col">层次</th><th scope="col">解决的问题</th><th scope="col">代表组件</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>硬件与启动信任</td><td>确保引导链没被篡改</td><td>TPM、Secure Boot、VBS/HVCI</td></tr>
+          <tr><td>身份与访问控制</td><td>决定“谁能做什么”</td><td>SID、Token、ACL、UAC、Credential Guard</td></tr>
+          <tr><td>网络边界</td><td>控制流量进出</td><td>Windows Defender 防火墙（WFAS）</td></tr>
+          <tr><td>恶意代码与漏洞利用防御</td><td>挡住已知威胁与内存攻击</td><td>Defender、DEP/ASLR/CFG、攻击面缩小</td></tr>
+          <tr><td>应用控制</td><td>只允许可信代码运行</td><td>WDAC、AppLocker、Smart App Control</td></tr>
+          <tr><td>审计与取证</td><td>事后回答“发生了什么”</td><td>审核策略、事件日志、Sysmon</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="第一层-硬件与启动信任链">第一层：硬件与启动信任链</h2>
+      <h3 id="tpm-与-secure-boot">TPM 与 Secure Boot</h3>
+      <p>安全体系的根在硬件。<strong>TPM（可信平台模块）</strong>是一个独立的安全协处理器，保存加密密钥并度量启动过程。BitLocker 的密钥封存、Windows Hello 的生物特征模板都依赖它。</p>
+      <p><strong>Secure Boot</strong> 确保 UEFI 只加载经过签名认可的引导程序：固件验证 bootloader → bootloader 验证内核 → 内核验证驱动，形成一条度量链。任何一环被篡改（如 Bootkit）都会导致启动失败。</p>
+      <h3 id="vbs-与-hvci-基于虚拟化的安全">VBS 与 HVCI：基于虚拟化的安全</h3>
+      <p>这是 Windows 10 之后最重要的架构变化。<strong>虚拟化安全（VBS, Virtualization-Based Security）</strong>利用 Hyper-V 创建一个隔离的虚拟信任层级（VTL1），把敏感数据放进普通内核（VTL0）也碰不到的内存区：</p>
+      <ul>
+        <li><strong>HVCI（内核代码完整性）</strong>：内核页表中的代码页被标记为不可写，所有内核驱动必须经二次签名验证，阻断内核 rootkit 主流路径。</li>
+        <li><strong>Credential Guard</strong>：把 LSASS 中的 NTLM 哈希与 Kerberos TGT 隔离到 VTL1，即使攻击者拿到 SYSTEM 权限也读取不到，直接废掉 Pass-the-Hash 类横向移动。</li>
+      </ul>
+      <p>查看状态：<code>msinfo32</code> 中的“基于虚拟化的安全性”一栏，或 <code>Get-CimInstance -ClassName Win32_DeviceGuard -Namespace root\Microsoft\Windows\DeviceGuard</code>。</p>
+
+      <h2 id="第二层-身份-token-与访问控制">第二层：身份、Token 与访问控制</h2>
+      <h3 id="sid-令牌与-acl">SID、令牌与 ACL</h3>
+      <p>Windows 中“身份”由 <strong>SID（Security Identifier）</strong>表示，例如 <code>S-1-5-21-...</code> 格式的用户 SID，以及 <code>S-1-5-32-544</code>（Administrators）、<code>S-1-5-18</code>（SYSTEM）这类知名 SID。</p>
+      <p>每个进程持有一个<strong>访问令牌（Token）</strong>，记录用户 SID、所属组 SID 与特权（Privileges）列表。每个内核对象都挂有一个<strong>安全描述符</strong>，包含 DACL（自主访问控制列表，决定谁被允许/拒绝）与 SACL（系统访问控制列表，决定哪些访问触发审计事件——注意这是与审计层的直接挂钩点）。访问检查的逻辑：</p>
+      <ol>
+        <li>按 DACL 中的 ACE 顺序逐条比对，显式 Deny 优先；</li>
+        <li>遍历到允许的 ACE 即停止，没有匹配则默认拒绝；</li>
+        <li>同时对照令牌中的特权（如 <code>SeBackupPrivilege</code> 可绕过部分 ACL 检查）。</li>
+      </ol>
+      <h3 id="uac-的实质">UAC 的实质</h3>
+      <p>UAC 不是“防病毒”，而是限制令牌特权。管理员登录后默认持有<strong>两个令牌</strong>：完整管理员令牌与过滤后的标准令牌。日常进程用过滤令牌运行，提权（Consent.exe 弹窗）时才切换到完整令牌。攻击者通过浏览器漏洞进入的进程通常继承低特权令牌，这压缩了初期的破坏半径。</p>
+      <h3 id="凭据保护与-laps">凭据保护与 LAPS</h3>
+      <ul>
+        <li><strong>LSASS 保护（RunAsPPL）</strong>：将 LSASS 标记为受保护进程（PPL），非签名调试器无法附加，mimikatz 类工具直接失败。</li>
+        <li><strong>LAPS（本地管理员密码解决方案）</strong>：为每台机器自动轮换随机本地管理员密码，防止“一台失陷、全域横向”。</li>
+      </ul>
+
+      <h2 id="第三层-防火墙-wfas">第三层：防火墙（WFAS）</h2>
+      <p>Windows 防火墙的正式名称是 <strong>Windows Defender Firewall with Advanced Security</strong>（底层服务 WFAS，即 mpssvc）。它是<strong>基于主机的有状态包过滤防火墙</strong>，规则引擎位于 Windows Filtering Platform（WFP）的内核层，应用层任何绕过尝试最终都会经过 WFP。</p>
+      <h3 id="三套配置文件">三套配置文件</h3>
+      <p>防火墙规则按网络位置分成三套独立配置，同一时刻只有一套生效：</p>
+      <table>
+        <thead>
+          <tr><th scope="col">Profile</th><th scope="col">适用场景</th><th scope="col">默认策略</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>域（Domain）</td><td>能连到域控制器</td><td>入站默认拒绝，出站默认允许</td></tr>
+          <tr><td>专用（Private）</td><td>家庭/办公可信网络</td><td>同上</td></tr>
+          <tr><td>公用（Public）</td><td>咖啡厅 Wi-Fi 等不可信网络</td><td>同上，但更严格的默认规则集</td></tr>
+        </tbody>
+      </table>
+      <p>默认策略本身是安全设计的关键：<strong>入站默认拒绝、出站默认允许</strong>。这样任何未经明确授权的服务（比如系统自动装了新的监听端口）都不会暴露到网络；出站宽松是可用性权衡，但企业环境可收紧为出站白名单。</p>
+      <h3 id="规则的四个判定维度">规则的四个判定维度</h3>
+      <p>一条防火墙规则可以同时绑定以下条件，全部匹配才放行：</p>
+      <ul>
+        <li><strong>程序</strong>：按 exe 路径匹配（这使规则跟着程序走而非端口走）；</li>
+        <li><strong>端口与协议</strong>：TCP/UDP、本地或远程端口范围；</li>
+        <li><strong>本地 IP 与远程 IP</strong>：可限定子网；</li>
+        <li><strong>允许/阻止 + 仅安全连接</strong>：后者要求 IPsec 认证，实现“只有域内机器才能访问我的 3389”。</li>
+      </ul>
+      <h3 id="常用管理命令">常用管理命令</h3>
+      <pre><code class="language-powershell"># 查看当前生效的 profile 与状态
+Get-NetFirewallProfile | Select Name, Enabled, DefaultInboundAction, DefaultOutboundAction
+
+# 查看所有启用的入站规则
+Get-NetFirewallRule -Direction Inbound -Enabled True | Select DisplayName, Profile, Action
+
+# 创建规则：仅允许内网网段访问 3389
+New-NetFirewallRule -DisplayName "RDP from LAN" -Direction Inbound -Protocol TCP `
+  -LocalPort 3389 -RemoteAddress 192.168.1.0/24 -Action Allow -Profile Domain,Private
+
+# netsh 经典写法
+netsh advfirewall firewall add rule name="RDP from LAN" dir=in action=allow `
+  protocol=TCP localport=3389 remoteip=192.168.1.0/24</code></pre>
+      <p>常见误区：把防火墙当成“关掉就快一点的东西”。正确的用法是保持开启 + 入站默认拒绝，按需为具体服务开白名单规则并限定来源地址；对服务器还应禁用对应的 profile 或收紧出站。</p>
+
+      <h2 id="第四层-恶意代码与漏洞利用防御">第四层：恶意代码与漏洞利用防御</h2>
+      <h3 id="defender-与云查杀">Defender 与云查杀</h3>
+      <p>Microsoft Defender Antivirus 内置内核态文件过滤驱动（WdFilter），在文件打开/写入时同步扫描；配合云保护（MAPS）能在数秒内对未知样本做出阻断决策。企业版与 Defender for Endpoint（MDE）打通后，还有 EDR 能力：进程树记录、自动隔离、攻击面缩小规则（ASR）。</p>
+      <h3 id="内存破坏攻击的四道闸">内存破坏攻击的四道闸</h3>
+      <p>对 C/C++ 时代的漏洞利用，Windows 层层设卡：</p>
+      <ul>
+        <li><strong>DEP</strong>：数据页不可执行，挡住栈/堆注入 shellcode；</li>
+        <li><strong>ASLR</strong>：模块基址随机化，让跳转地址不可预测；</li>
+        <li><strong>CFG（控制流防护）</strong>：间接调用前校验目标是否为合法函数入口；</li>
+        <li><strong>Exploit Protection</strong>：按进程组合上述缓解及更多（如强制随机化、堆保护），可替代老的 EMET。</li>
+      </ul>
+      <h3 id="内核完整性">内核完整性</h3>
+      <ul>
+        <li><strong>PatchGuard（内核补丁保护）</strong>：x64 内核周期性校验 SSDT、IDT、GDT 等关键结构被篡改即触发蓝屏，直接宣判传统 rootkit 死刑；</li>
+        <li><strong>驱动签名强制</strong>：x64 内核只加载 WHQL 或 EV 交叉签名驱动，HVCI 进一步要求全部驱动过微软验证。</li>
+      </ul>
+
+      <h2 id="第五层-应用控制-从黑名单到白名单">第五层：应用控制——从黑名单到白名单</h2>
+      <p>杀毒软件是“黑名单”思路：见到恶意特征就拦。应用控制反转了模型——<strong>默认一切不可运行，只有白名单里的代码才允许执行</strong>，这是对付无文件攻击与合法工具滥用（LOLBins）的根本手段。</p>
+      <ul>
+        <li><strong>WDAC（Windows Defender Application Control）</strong>：内核层代码完整性策略，基于签名证书链、文件哈希或包家族名判定，策略可按“基准 + 补充”组合，企业推荐默认拒绝、按发布者放行；</li>
+        <li><strong>AppLocker</strong>：用户模式策略，按路径/哈希/发布者规则控制 exe、脚本、msi、dll，规则更易写但可被绕过的面更大，常与 WDAC 叠加；</li>
+        <li><strong>Smart App Control</strong>：Windows 11 新增，云端信誉 + AI 判定，适合消费者场景。</li>
+      </ul>
+
+      <h2 id="第六层-安全审计与事件日志">第六层：安全审计与事件日志</h2>
+      <p>审计回答的是“事后”问题：谁在什么时候登录过、执行了什么、动了什么对象。没有审计的防御体系，失陷后等于失明。</p>
+      <h3 id="审核策略-开启审计的第一步">审核策略：开启审计的第一步</h3>
+      <p>Windows 的安全事件<strong>默认只记录很小一部分</strong>。要审计什么，需要在“高级审核策略”（<code>secpol.msc</code> → 本地策略 → 审核策略，或 <code>auditpol /get /category:*</code> 查看）中显式开启，主要子类别：</p>
+      <table>
+        <thead>
+          <tr><th scope="col">子类别</th><th scope="col">记录内容</th><th scope="col">关键事件 ID</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>登录/注销</td><td>成功与失败的登录、RDP 登录、锁屏解锁</td><td>4624 成功登录、4625 失败登录、4634 注销、4648 显式凭据登录</td></tr>
+          <tr><td>账户管理</td><td>账户创建/删除、组成员变更</td><td>4720 创建用户、4722 启用、4728/4732 加入组</td></tr>
+          <tr><td>进程创建</td><td>每个新进程的启动（含命令行）</td><td>4688 进程创建、4696 进程终止</td></tr>
+          <tr><td>对象访问</td><td>文件/注册表/目录的访问（依赖 SACL）</td><td>4656 句柄请求、4663 对象访问</td></tr>
+          <tr><td>特权使用</td><td>敏感特权被调用</td><td>4672 特权分配、4673 敏感特权调用</td></tr>
+          <tr><td>策略变更</td><td>审核策略、防火墙策略被修改</td><td>4719 审核策略变更、4946/4948 防火墙例外增删</td></tr>
+        </tbody>
+      </table>
+      <p>推荐最小集：4624/4625/4688（登录与进程链）+ 4720（账户管理）+ 4719/4946（策略被改）。开启进程创建命令行审计需要额外设置 <code>HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System\Audit</code> 下的 <code>ProcessCreationIncludeCmdLine_Enabled=1</code>。</p>
+      <h3 id="事件日志的存储位置">事件日志的存储位置</h3>
+      <p>审计事件落在 <strong>Security 日志</strong>（<code>eventvwr.msc</code>），普通进程即使有管理员权限也默认读不了 Security 日志——需要 <code>SeSecurityPrivilege</code>，这是日志自身的访问控制。配套的还有 System（服务与驱动）、Application、以及 PowerShell 的 Operational 日志（4104 脚本块记录）。</p>
+      <pre><code class="language-powershell"># 查询最近 10 条失败登录
+Get-WinEvent -FilterHashtable @{LogName='Security'; Id=4625} -MaxEvents 10 |
+  Select TimeCreated, @{n='User';e={$_.Properties[5].Value}}, @{n='SourceIP';e={$_.Properties[19].Value}}
+
+# 按 ID 统计登录来源
+Get-WinEvent -FilterHashtable @{LogName='Security'; Id=4624} |
+  ForEach-Object { $_.Properties[18].Value } | Group-Object | Sort Count -Descending</code></pre>
+      <h3 id="登录事件的类型字段">登录事件的类型字段</h3>
+      <p>4624 中的 Logon Type 区分登录来源，排查时最先看它：</p>
+      <table>
+        <thead>
+          <tr><th scope="col">类型</th><th scope="col">含义</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>2</td><td>本地交互登录（键盘）</td></tr>
+          <tr><td>3</td><td>网络登录（SMB、共享，攻击者横向移动的典型）</td></tr>
+          <tr><td>5</td><td>服务登录</td></tr>
+          <tr><td>7</td><td>解锁</td></tr>
+          <tr><td>8</td><td>明文网络登录（Basic 认证，风险高）</td></tr>
+          <tr><td>10</td><td>远程交互（RDP）</td></tr>
+        </tbody>
+      </table>
+      <h3 id="sysmon-把日志从够用提到好用">Sysmon：把日志从“够用”提到“好用”</h3>
+      <p>Sysmon（Sysinternals 工具）以服务形式常驻，往 Application 层的 Sysmon 日志写入远比原生审计细的遥测：进程创建及完整命令行、进程完整性级别、网络连接（含进程与目标 IP）、镜像加载、原始磁盘访问、剪贴板读取等。配合 SwiftOnSecurity 的 sysmon-config 这类社区配置，是主机取证事实上的标配。EDR（MDE 等）本质上就是它的企业化超集。</p>
+      <h3 id="审计层面的三个关键原则">审计层面的三个关键原则</h3>
+      <ol>
+        <li><strong>审计要能覆盖攻击链</strong>：初始访问（登录事件）→ 执行（4688/Sysmon）→ 持久化（计划任务 4698、服务 7045、注册表 run key）→ 横向（Type 3/10 登录）→ 影响（对象删除 4660）。每一环都应有事件可查；</li>
+        <li><strong>日志必须外送</strong>：留在本机的日志攻击者可清空（事件 1102 就是日志被清除的信号）。域环境用 Windows Event Forwarding 或 SIEM 集中收集；</li>
+        <li><strong>日志本身是攻击面</strong>：日志服务被塞爆会造成噪音掩盖，安全日志写满且策略为“不覆盖”时会拒绝合法登录，容量与保留策略要规划。</li>
+      </ol>
+
+      <h2 id="贯穿性能力-加密与备份">贯穿性能力：加密与备份</h2>
+      <ul>
+        <li><strong>BitLocker</strong>：整盘加密，密钥封存于 TPM，配合 Secure Boot 防离线攻击；</li>
+        <li><strong>EFS 与 CNG</strong>：文件级加密与新一代加密 API（支持椭圆曲线）；</li>
+        <li><strong>勒索软件防护</strong>：受控文件夹访问（Controlled Folder Access）阻止未授权进程改写文档目录，本质是“白名单进程才能写关键路径”，是应用控制思想在文件系统上的延伸。</li>
+      </ul>
+
+      <h2 id="实践清单-从默认到加固">实践清单：从默认到加固</h2>
+      <ol>
+        <li>确认 TPM 2.0 + Secure Boot 已开启，VBS/HVCI 生效（msinfo32 检查）；</li>
+        <li>防火墙保持三 profile 全开，入站默认拒绝，服务按“最小来源 + 最小端口”加白名单规则；</li>
+        <li>开启审核策略最小集（登录、账户管理、进程创建含命令行、策略变更）；</li>
+        <li>部署 Sysmon + 结构化配置，或接入 EDR，日志外送到集中存储；</li>
+        <li>启用 Credential Guard 与 LSASS PPL，域环境启用 LAPS；</li>
+        <li>对高价值主机上 WDAC 白名单（先审计模式跑两周，再切强制）；</li>
+        <li>开启 BitLocker 与受控文件夹访问；</li>
+        <li>用 Microsoft 安全评分（<code>Get-SecOpsOverview</code>/Defender 门户）跟踪加固进度。</li>
+      </ol>
+
+      <h2 id="参考资料">参考资料</h2>
+      <ul>
+        <li><a href="https://learn.microsoft.com/windows/security/" class="external external-link">Microsoft Learn: Windows security documentation</a></li>
+        <li><a href="https://learn.microsoft.com/windows/security/threat-protection/windows-firewall/windows-firewall-with-advanced-security" class="external external-link">Windows Firewall with Advanced Security</a></li>
+        <li><a href="https://learn.microsoft.com/windows/security/threat-protection/auditing/basic-security-audit-events" class="external external-link">Basic security audit events</a></li>
+        <li><a href="https://learn.microsoft.com/sysinternals/downloads/sysmon" class="external external-link">Sysinternals: Sysmon</a></li>
+      </ul>
+    </article>
+  </main>
+</body>
+</html>
