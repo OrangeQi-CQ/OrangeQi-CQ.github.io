@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="以同源策略为根，系统梳理 Chromium 承载的 Web 安全体系：Cookie 的属性与隔离、CORS 的跨源协商、XSS 的防线（CSP/Trusted Types）与 CSRF 的缓解（SameSite/Token），以及帧嵌入、Referrer、混合内容等配套机制。">
+  <meta name="note:title" content="Chromium Web 安全体系：同源策略、Cookie、CORS、XSS 与 CSRF">
+  <meta name="note:topic" content="chromium">
+  <meta name="note:date" content="">
+  <meta name="note:updated" content="2026-10-30">
+  <meta name="note:summary" content="以同源策略为根，系统梳理 Chromium 承载的 Web 安全体系：Cookie 的属性与隔离、CORS 的跨源协商、XSS 的防线（CSP/Trusted Types）与 CSRF 的缓解（SameSite/Token），以及帧嵌入、Referrer、混合内容等配套机制。">
+  <meta name="note:tags" content="Chromium, Web安全, 同源策略, Cookie, CORS, XSS, CSRF, CSP">
+  <title>Chromium Web 安全体系：同源策略、Cookie、CORS、XSS 与 CSRF | OrangeQi 知识库</title>
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/assets/site.css">
+</head>
+<body class="article-page">
+  <header class="site-header">
+    <a class="brand" href="/" aria-label="OrangeQi 知识库首页"><span class="brand-mark" aria-hidden="true">O</span><span class="brand-name">OrangeQi <span>知识库</span></span></a>
+    <nav class="header-nav" aria-label="主导航"><a href="/">返回笔记库 <span aria-hidden="true">↗</span></a></nav>
+  </header>
+  <main class="note-page">
+    <nav class="note-breadcrumbs" aria-label="面包屑"><a href="/">笔记库</a><span>/</span><span>Chromium 架构与内核</span><span>/</span><span>Chromium Web 安全体系</span></nav>
+    <header class="note-header"><p class="note-eyebrow">Chromium 架构与内核 / NOTE</p><h1>Chromium Web 安全体系：同源策略、Cookie、CORS、XSS 与 CSRF</h1><p class="note-deck">以同源策略为根，系统梳理 Chromium 承载的 Web 安全体系：Cookie 的属性与隔离、CORS 的跨源协商、XSS 的防线（CSP/Trusted Types）与 CSRF 的缓解（SameSite/Token），以及帧嵌入、Referrer、混合内容等配套机制。</p><div class="note-byline"><span class="note-date-item">更新 <time datetime="2026-10-30">2026-10-30</time></span><span class="note-date-item">记录 未注明</span><span class="note-header-tag">#Web安全</span><span class="note-header-tag">#同源策略</span><span class="note-header-tag">#Cookie</span><span class="note-header-tag">#CORS</span><span class="note-header-tag">#XSS</span><span class="note-header-tag">#CSRF</span><span class="note-header-tag">#CSP</span></div></header>
+    <article class="note-content">
+      <p>Web 是一个攻击面极其特殊的环境：任何页面都可以加载并执行来自任意第三方的代码，用户同时登录着几十个站点。Chromium 的"业务安全"（相对于上一层的沙箱/多进程这类平台安全）就是在这个前提下建立的：用一组由浏览器强制执行的安全策略，把不可信代码圈死在它的来源之内。这些机制的共同根源只有一个——<strong>同源策略</strong>。</p>
+
+      <h2 id="1-同源策略-一切的根">1. 同源策略：一切的根</h2>
+
+      <p>同源策略（Same-Origin Policy, SOP）规定：一个源（origin = scheme + host + port）的文档或脚本，<strong>不能读取另一个源的资源内容</strong>。注意边界划分：</p>
+
+      <ul>
+        <li><strong>被隔离的是"读"</strong>：跨源写（表单提交、img 加载、script 加载）默认是允许的，这是 Web 开放性的基础；跨源<strong>读取响应内容</strong>被禁止。</li>
+        <li><strong>隔离单位是源而非站点</strong>：<code>https://a.com</code> 与 <code>http://a.com</code>（scheme 不同）、<code>a.com</code> 与 <code>b.a.com</code>（host 不同）都互为跨源。子域之间需要显式 <code>document.domain</code>（已废弃，转向 COOP/COEP 体系）或 postMessage 协作。</li>
+        <li><strong>CSSOM/DOM/存储/Cookie 全部受影响</strong>：跨源 iframe 的 DOM 不可读写、跨源的 localStorage/XHR 响应不可见、HttpOnly 的 Cookie 跨源 JS 不可读。</li>
+      </ul>
+
+      <p>同源策略与上一节的多进程架构呼应：Site Isolation 把不同源放进不同进程，是把 SOP 的逻辑边界落到物理边界上——侧信道时代，逻辑隔离不够。</p>
+
+      <h2 id="2-cookie-凭据的载体">2. Cookie：凭据的载体</h2>
+
+      <p>Cookie 是 Web 会话的默认凭据机制，也是绝大多数攻击（CSRF、会话固定、劫持）的目标。浏览器对 Cookie 的控制靠一组属性：</p>
+
+      <table>
+        <thead>
+          <tr><th>属性</th><th>作用</th><th>防的攻击</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>Secure</code></td><td>仅 HTTPS 连接发送</td><td>明文网络劫持</td></tr>
+          <tr><td><code>HttpOnly</code></td><td>JS（<code>document.cookie</code>）不可读</td><td>XSS 窃取会话</td></tr>
+          <tr><td><code>SameSite</code></td><td>限制跨站请求携带（Lax/Strict/None）</td><td>CSRF、跨站泄露</td></tr>
+          <tr><td><code>Domain</code> 作用域</td><td>默认 host-only，显式 Domain 允许子域共享</td><td>越权写入（配合前缀）</td></tr>
+          <tr><td><code>Path</code></td><td>路径作用域（安全上很弱，仅约定）</td><td>—</td></tr>
+          <tr><td><code>__Host-</code> / <code>__Secure-</code> 前缀</td><td>浏览器强制：<code>__Host-</code> 必须 Secure、无 Domain、Path=/</td><td>子域攻击篡改父域 Cookie</td></tr>
+          <tr><td><code>Partitioned</code>（CHIPS）</td><td>按顶级站点分区存储，第三方 Cookie 每站一份</td><td>跨站跟踪、站间凭据串联</td></tr>
+        </tbody>
+      </table>
+
+      <p><strong>SameSite 是近年最重要的变化</strong>：<code>Lax</code>（Chrome 默认）允许顶级导航 GET 携带 Cookie、禁止跨站 POST/iframe/XHR/fetch 携带；<code>Strict</code> 连顶级导航也不带；<code>None</code> 必须搭配 <code>Secure</code>。这直接把"跨站请求默默带凭据"这一 CSRF 的前提削掉了一大半——但 Lax 下的顶级 GET 导航仍然携带，CSRF 并未根除（见第 5 节）。</p>
+
+      <p>另外要区分 <strong>第一方与第三方 Cookie</strong>：iframe 中设置的 Cookie 属于第三方上下文。Chrome 正在以 CHIPS（Partitioned）+ 用户设置替代单纯的"第三方 Cookie 封杀"，方向是"分区的第三方 Cookie"——存在但彼此隔离，无法用于跨站串联身份。</p>
+
+      <h2 id="3-cors-跨源的受控放行">3. CORS：跨源的受控放行</h2>
+
+      <p>CORS（Cross-Origin Resource Sharing）不是防火墙，而是<strong>在同源策略上开的一扇受控的窗</strong>。它是服务器授权协议：服务器通过响应头声明"我允许哪个源以什么方式读我"。</p>
+
+      <h3 id="31-简单请求与预检">3.1 简单请求与预检</h3>
+
+      <ul>
+        <li><strong>简单请求</strong>（GET/POST/HEAD + 安全的 Content-Type 等）：直接发出，响应带 <code>Access-Control-Allow-Origin</code> 时浏览器才把结果交给脚本。</li>
+        <li><strong>预检请求（preflight）</strong>：携带自定义头、PUT/DELETE 等方法的请求，浏览器先发一个 <code>OPTIONS</code>，带上 <code>Origin</code>、<code>Access-Control-Request-Method</code> / <code>-Headers</code>；服务器应答允许后，真实请求才发出。</li>
+      </ul>
+
+      <p>预检的设计意图很微妙：<strong>保护的是"旧服务器"</strong>。Web 上存在大量不支持 CORS 的老服务，若无预检，浏览器发出的新式跨源写请求会真实打到它们身上。预检先确认服务器"懂 CORS"，不懂就拦截在真实请求之前。</p>
+
+      <h3 id="32-凭据与通配符">3.2 凭据与通配符</h3>
+
+      <ul>
+        <li><code>fetch(url, {credentials: 'include'})</code> 跨源携带 Cookie 时，服务器必须回 <code>Access-Control-Allow-Origin: https://具体源</code>（<strong>不能是 <code>*</code></strong>）且 <code>Access-Control-Allow-Credentials: true</code>。</li>
+        <li>常见漏洞模式：服务器把请求头里的 <code>Origin</code> 原样反射回 <code>Allow-Origin</code>，等于向任意站点开放了带凭据的读取权限。白名单校验是唯一正解。</li>
+        <li>CORS 只管"读"；<strong>阻止跨源写请求靠不了 CORS</strong>——那是 CSRF token 与 SameSite 的职责。</li>
+      </ul>
+
+      <h2 id="4-xss-注入类攻击与防线">4. XSS：注入类攻击与防线</h2>
+
+      <p>XSS（Cross-Site Scripting）是攻击者把脚本注入受害页面执行：存储型（注入进数据库）、反射型（注入进 URL 回显）、DOM 型（前端拼接未转义数据）。XSS 一旦成立，同源策略就反向为攻击者服务——脚本获得受害源的全部权限：读 Cookie（无 HttpOnly 时）、发任意同源请求、篡改 DOM、记录键盘。</p>
+
+      <p>防线分三层：</p>
+
+      <ol>
+        <li><strong>输出编码（应用层，治本）</strong>：按上下文转义（HTML 实体、JS 字符串、URL、CSS），框架默认转义（React/Vue 的 JSX 与模板）。这是唯一完整解。</li>
+        <li><strong>CSP（Content-Security-Policy，浏览器强制）</strong>：
+          <ul>
+            <li><code>default-src 'self'</code> + 显式脚本源，内联脚本（<code>&lt;script&gt;</code> 直接量、内联事件处理器）默认被禁；</li>
+            <li>nonce 或 hash 模式（<code>script-src 'nonce-xxx'</code>）兼顾内联需求与白名单；</li>
+            <li>限制面不止脚本：connect-src、frame-ancestors、base-uri 等覆盖注入点。</li>
+            <li><code>Content-Security-Policy-Report-Only</code> 用于灰度观察。</li>
+          </ul>
+        </li>
+        <li><strong>Trusted Types（Chromium 原生支持）</strong>：把 sink（<code>innerHTML</code>、<code>eval</code> 等）锁死，只接受经过显式策略创建的 TrustedScript/TrustedHTML 对象，把"字符串进 DOM"变成类型错误。配合 CSP <code>require-trusted-types-for 'script'</code>，DOM 型 XSS 在大规模前端代码库里可被架构性消除。</li>
+        <li>辅助：<code>HttpOnly</code> 让偷 Cookie 不成（但不防"以受害者身份发请求"）；<code>Sanitizer API</code> 正在标准化安全清洗 HTML 的原语。</li>
+      </ol>
+
+      <p>关键认知：<strong>CSP 与 Trusted Types 是纵深防御而非替代品</strong>——编码漏了，策略挡住；策略配置过宽（如允许 <code>unsafe-inline</code> 或存在可被绕过的 JSONP 端点），编码兜底。CSP 的绕过史本身就是一个安全研究方向（script gadgets、严格 CSP 的现实可行性）。</p>
+
+      <h2 id="5-csrf-冒名请求与缓解">5. CSRF：冒名请求与缓解</h2>
+
+      <p>CSRF（Cross-Site Request Forgery，常被误写为 CSFR）利用的不是漏洞代码，而是 Web 的默认行为：<strong>跨站请求会自动带上目标站点的 Cookie</strong>。恶意页面上一个 <code>&lt;form action="https://bank.com/transfer" method="POST"&gt;</code> 自动提交，浏览器就会带着你在 bank.com 的登录态发出转账请求——服务器看到的是"已认证的合法用户"。</p>
+
+      <p>缓解体系：</p>
+
+      <ul>
+        <li><strong>SameSite Cookie</strong>（浏览器侧）：Chrome 默认 Lax 已拦截绝大多数跨站 POST 场景。但顶级导航的跨站 GET 仍携带 Cookie，且旧浏览器/某些内嵌 WebView 不完全遵守——不能单独依赖。</li>
+        <li><strong>CSRF Token（应用侧，经典主防线）</strong>：表单内嵌服务端签发的随机 token，服务器校验。攻击者跨站无法读取 token（同源策略），伪造的请求必然缺 token。双提交 Cookie（cookie + 请求字段各带一份）是无状态部署变体，但要小心子域可写 Cookie 的场景（配合 <code>__Host-</code> 前缀）。</li>
+        <li><strong>Origin/Referer 校验（服务侧）</strong>：校验请求头来源是否本站。可行但 Referer 可能缺失/被策略裁剪，Origin 头在部分老客户端缺失。</li>
+        <li><strong>Fetch Metadata（浏览器侧，新世代的解）</strong>：<code>Sec-Fetch-Site: cross-site</code>、<code>Sec-Fetch-Mode</code> 等由浏览器自动附加、JS 不可伪造。服务器（或边缘）据此直接拒绝跨站请求——把 CSRF 防御从"每站自建 token"变成"平台级请求来源标签"。Resource Isolation Policy（RIP）模式就是基于它。</li>
+      </ul>
+
+      <p>注意 CSRF 与 CORS 的分工：CORS 阻止<strong>读</strong>跨源响应；CSRF 防的是<strong>写</strong>（冒名请求本来就"能发"，只是不能被脚本读到响应）。所以 CSRF 的防御核心是"让服务器拒绝不可信来源的写"，而不是阻止请求发出。</p>
+
+      <h2 id="6-配套机制-一张更完整的地图">6. 配套机制：一张更完整的地图</h2>
+
+      <table>
+        <thead>
+          <tr><th>机制</th><th>解决什么</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>X-Frame-Options</code> / CSP <code>frame-ancestors</code></td><td>点击劫持（Clickjacking）：禁止被恶意站嵌入 iframe 遮罩诱骗点击</td></tr>
+          <tr><td><code>Referrer-Policy</code></td><td>控制跨站导航携带的来源信息，防 URL 内敏感参数泄露（<code>strict-origin-when-cross-origin</code> 为 Chrome 默认）</td></tr>
+          <tr><td>HSTS + 混合内容拦截</td><td>强制 HTTPS、阻止 HTTPS 页面加载 HTTP 子资源（混合内容分可阻断/可选阻断两类）</td></tr>
+          <tr><td><code>COOP/COEP/CORP</code></td><td>跨源 opener/嵌入隔离：window.opener 关系切断、跨源子资源必须授权（为 Spectre 时代的 XS-Leak 提供进程级隔离前提）</td></tr>
+          <tr><td><code>Permissions-Policy</code></td><td>按来源/iframe 控制摄像头、地理定位等高权限 API 可用性</td></tr>
+          <tr><td><code>postMessage</code> origin 校验</td><td>跨源通信的受控通道；不校验 e.origin 是常见注入点</td></tr>
+          <tr><td>iframe <code>sandbox</code> 属性</td><td>对嵌入内容降权：禁脚本/表单/同源访问等，粒度化委托</td></tr>
+          <tr><td>XS-Leak 防护族</td><td>防侧信道读跨源响应元信息（长度、时间、缓存状态）：COEP、Partitioned 缓存、Fetch Metadata</td></tr>
+        </tbody>
+      </table>
+
+      <p>可以把这些机制按"信任边界的维护者"归类：<strong>浏览器强制</strong>（SOP、SameSite、CSP、混合内容、Fetch Metadata、COOP/COEP）与<strong>服务器声明 + 浏览器执行</strong>（CORS、frame-ancestors、Referrer-Policy）。业务方真正要写代码防的，只剩输出编码与 CSRF token 这类应用层逻辑；其余都在向"平台兜底"收敛——这也是 Web 安全十余年演进的主线：把安全正确性从每个开发者的自觉，变成浏览器的默认。</p>
+
+      <h2 id="7-小结与心智模型">7. 小结与心智模型</h2>
+
+      <ol>
+        <li><strong>同源策略是公理</strong>：默认隔离，CORS 是受控放行，Site Isolation 是物理加固。</li>
+        <li><strong>凭据链看 Cookie</strong>：Secure/HttpOnly/SameSite/前缀/Partitioned 各守一段，会话安全=属性配置+作用域最小化。</li>
+        <li><strong>读与写分治</strong>：CORS 管读，CSRF 管"写"，XSS 管"注入后什么都做"。三者常被混为一谈，但防线完全不同。</li>
+        <li><strong>纵深防御</strong>：应用层编码/Token 为主，浏览器策略（CSP、Trusted Types、SameSite、Fetch Metadata）为盾，二者互为兜底。</li>
+      </ol>
+
+      <p>延伸方向：XS-Leak 攻击面系统整理、严格 CSP 在大型工程的落地案例（Google 的经验）、Trusted Types 迁移方法论、以及 Cookie 的演进（CHIPS 与 Storage Access API 的博弈）。</p>
+    </article>
+  </main>
+</body>
+</html>
