@@ -17,7 +17,9 @@ const server = createServer(async (request, response) => {
     const pathname = decodeURIComponent(new URL(request.url, 'http://localhost').pathname);
     const requested = resolve(root, `.${pathname}`);
     if (requested !== root && !requested.startsWith(`${root}${sep}`)) throw new Error('Invalid path');
-    const file = await stat(requested).then(() => requested).catch(async () => join(requested, 'index.html'));
+    const stats = await stat(requested).catch(() => null);
+    let file = requested;
+    if (!stats || stats.isDirectory()) file = join(requested, 'index.html');
     await access(file);
     response.writeHead(200, { 'content-type': types[extname(file)] || 'application/octet-stream' });
     createReadStream(file).pipe(response);

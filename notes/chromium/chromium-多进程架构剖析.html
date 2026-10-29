@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Chromium 采用多进程架构把浏览器拆分为 Browser、Renderer、GPU 等进程，以进程为隔离边界换取稳定性与安全性。本文剖析其进程模型、Site Isolation 策略、进程间通信与代价。">
+  <meta name="note:title" content="Chromium 浏览器多进程架构剖析">
+  <meta name="note:topic" content="chromium">
+  <meta name="note:date" content="">
+  <meta name="note:updated" content="2026-10-30">
+  <meta name="note:summary" content="Chromium 采用多进程架构把浏览器拆分为 Browser、Renderer、GPU 等进程，以进程为隔离边界换取稳定性与安全性。本文剖析其进程模型、Site Isolation 策略、进程间通信与代价。">
+  <meta name="note:tags" content="Chromium, 多进程, 架构, Site Isolation, Mojo, 沙箱">
+  <title>Chromium 浏览器多进程架构剖析 | OrangeQi 知识库</title>
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/assets/site.css">
+</head>
+<body class="article-page">
+  <header class="site-header">
+    <a class="brand" href="/" aria-label="OrangeQi 知识库首页"><span class="brand-mark" aria-hidden="true">O</span><span class="brand-name">OrangeQi <span>知识库</span></span></a>
+    <nav class="header-nav" aria-label="主导航"><a href="/">返回笔记库 <span aria-hidden="true">↗</span></a></nav>
+  </header>
+  <main class="note-page">
+    <nav class="note-breadcrumbs" aria-label="面包屑"><a href="/">笔记库</a><span>/</span><span>Chromium 架构与内核</span><span>/</span><span>Chromium 浏览器多进程架构剖析</span></nav>
+    <header class="note-header"><p class="note-eyebrow">Chromium 架构与内核 / NOTE</p><h1>Chromium 浏览器多进程架构剖析</h1><p class="note-deck">Chromium 采用多进程架构把浏览器拆分为 Browser、Renderer、GPU 等进程，以进程为隔离边界换取稳定性与安全性。本文剖析其进程模型、Site Isolation 策略、进程间通信与代价。</p><div class="note-byline"><span class="note-date-item">更新 <time datetime="2026-10-30">2026-10-30</time></span><span class="note-date-item">记录 未注明</span><span class="note-header-tag">#Chromium</span><span class="note-header-tag">#多进程</span><span class="note-header-tag">#架构</span><span class="note-header-tag">#Site Isolation</span><span class="note-header-tag">#Mojo</span><span class="note-header-tag">#沙箱</span></div></header>
+    <article class="note-content">
+      <p>打开任务管理器（Shift+Esc 或系统任务管理器），一个 Chrome 窗口往往对应十几个进程。这不是设计失控，而是 Chromium 最核心的架构决策：<strong>用进程边界作为稳定性和安全性的隔离单元</strong>。理解多进程架构，是理解 Chromium 一切后续设计（沙箱、Site Isolation、Mojo IPC）的前提。</p>
+
+      <h2 id="1-为什么要多进程">1. 为什么要多进程</h2>
+
+      <p>早期的浏览器（包括 Netscape 和 Chrome 之前的 IE）大多以<strong>单进程</strong>运行：页面渲染、插件、UI、网络请求全部混在一个进程里。这带来三类问题：</p>
+
+      <ol>
+        <li><strong>稳定性</strong>：任何一个页面的崩溃（如脚本触发渲染引擎 bug）会拖垮整个浏览器，所有标签页一起消失。</li>
+        <li><strong>安全性</strong>：网页是不可信输入。渲染恶意页面时，攻击代码与浏览器特权代码同处一个地址空间，一旦利用漏洞即可完全控制浏览器。</li>
+        <li><strong>性能隔离</strong>：一个页面的死循环或海量内存分配会卡住所有页面，无法单独回收或限流。</li>
+      </ol>
+
+      <p>多进程架构对三个问题给出同一份答案：<strong>进程 = 最强的操作系统级隔离</strong>。独立的虚拟地址空间、独立的句柄表、独立的调度与 OOM 单元，崩溃只能波及自身，跨进程访问必须经过内核。代价则是内存冗余和通信开销——这是 Chromium 有意识做出的权衡。</p>
+
+      <h2 id="2-进程类型">2. 进程类型</h2>
+
+      <p>一个典型 Chromium 实例包含以下进程：</p>
+
+      <pre><code>Browser 进程（唯一）
+ ├── Renderer 进程 × N        （每若干个页面/iframe 一个）
+ ├── GPU 进程 × 1             （光栅化、合成、WebGL/WebGPU）
+ ├── Network Service          （网络栈，独立进程）
+ ├── Storage Service          （部分存储后端）
+ ├── Utility 进程 × N         （网络沙箱辅助、音频解密等）
+ ├── Audio Service
+ ├── Viz / Display Compositor（合并进 GPU 进程）
+ └── 插件 / 扩展相关进程（PPAPI、扩展宿主等）</code></pre>
+
+      <h3 id="21-browser-进程">2.1 Browser 进程</h3>
+
+      <p><strong>特权中枢，全局唯一</strong>。负责窗口与标签页管理、地址栏与 UI（Views/Aura）、网络请求调度、磁盘访问（Cookie、历史、缓存）、以及所有子进程的生命周期管理。Browser 进程拥有真实文件系统和系统 API 的访问权，是唯一"被信任"的进程。</p>
+
+      <p>关键原则：Browser 进程<strong>不解析网页内容</strong>。所有不可信数据的处理都被推出进程边界，交给被沙箱化的进程。</p>
+
+      <h3 id="22-renderer-进程">2.2 Renderer 进程</h3>
+
+      <p><strong>不可信代码的执行场所</strong>。每个 Renderer 内含 Blink（渲染引擎：DOM/CSS/布局）、V8（JS 引擎）和渲染管线的前半段（样式、布局、绘制指令生成）。一个标签页通常对应一个 Renderer 任务，而不是一个 OS 进程——任务与进程的映射关系由 Site Isolation 策略决定（见第 3 节）。</p>
+
+      <p>Renderer 运行在<strong>沙箱</strong>中：没有自己的文件系统访问权、不能直接读写剪贴板/网络/字体配置。它需要的所有特权操作（联网、存 Cookie、弹下载框）都要通过 IPC 请求 Browser 进程代办。即使攻击者在 Renderer 内获得任意代码执行，能接触的系统资源也极其有限。</p>
+
+      <h3 id="23-gpu-进程">2.3 GPU 进程</h3>
+
+      <p>承载<strong>光栅化（rasterization）与合成（compositing）</strong>。Renderer 生成绘制指令（cc::DisplayItemList），GPU 进程将其光栅化为纹理，再合成最终屏幕图像（Viz compositor）。WebGL/WebGPU/视频解码的硬件加速路径也在这里。GPU 进程是独立的，因为 GPU 驱动崩溃率高且驱动本身不可信——崩溃后可以重启 GPU 进程并重建上下文，页面不丢。</p>
+
+      <h3 id="24-network-utility-等辅助进程">2.4 Network / Utility 等辅助进程</h3>
+
+      <p>Chrome 65+ 将网络栈从 Browser 进程迁出为独立 <strong>Network Service</strong>（进程内或独立进程可配），为后续把网络栈放进更严格沙箱铺路。<strong>Utility 进程</strong>是通用的低特权容器：音频服务、存储服务、解密模块等都运行在 utility 容器中，遵循同样的"能力最小化"思路。</p>
+
+      <h2 id="3-site-isolation-进程怎么分配">3. Site Isolation：进程怎么分配</h2>
+
+      <p>"哪些页面共享一个 Renderer 进程"是核心策略问题，Chrome 的答案经历了两个阶段：</p>
+
+      <table>
+        <thead>
+          <tr><th>策略</th><th>隔离单位</th><th>状态</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Process-per-tab</td><td>标签页</td><td>早期默认</td></tr>
+          <tr><td>Strict Site Isolation</td><td>站点（scheme + eTLD+1）</td><td>Chrome 67 起桌面端全面默认</td></tr>
+        </tbody>
+      </table>
+
+      <p><strong>Site Isolation</strong> 保证不同站点的文档绝不共享进程——即使它们看起来是同一个标签页（iframe 嵌套也不行）。动机来自 2018 年披露的 Spectre 类漏洞：在同一地址空间内，侧信道攻击可以从 JS 读取其他来源的数据；进程隔离让跨站数据物理上不在同一地址空间，侧信道无从下手。OOPIF（Out-of-Process iframes）就是为此引入的机制：一个标签页内嵌入的第三方 iframe 会运行在独立的 Renderer 进程中。</p>
+
+      <p>进程数会随打开的站点数增长，Chrome 用进程复用与上限策略控制开销：低内存设备上回退到部分隔离（只隔离跨站 iframe 或登录站点），桌面端允许几十个 Renderer。可在 <code>chrome://process-internals</code> 查看站点到进程的实际映射。</p>
+
+      <h2 id="4-进程间通信-ipc">4. 进程间通信（IPC）</h2>
+
+      <p>多进程架构的另一半是通信机制。Chromium 的 IPC 演进为：</p>
+
+      <ul>
+        <li><strong>Legacy Chrome IPC</strong>：命名管道 + 消息路由，按 message ID 分发，已在逐步淘汰。</li>
+        <li><strong>Mojo</strong>：现行标准。基于 <code>.mojom</code> 接口定义语言生成类型安全的 C++/JS 绑定，底层是消息管道（message pipe）与数据管道（data pipe、共享内存）。所有进程启动时由 Browser 进程完成 Mojo 通道引导（bootstrapping），之后服务之间可以互相建立接口连接。</li>
+      </ul>
+
+      <p>Mojo 的意义不只是 API 美化：<strong>安全边界在接口定义层显式化</strong>。Renderer 能请求什么服务、参数是什么，全部罗列在 mojom 文件里，安全审查可以对着接口清单做。Service Worker、Storage Partition、Permission 等子系统都定义为一组 Mojo 服务。</p>
+
+      <pre><code>// 典型流程：Renderer 请求网络（示意）
+// Renderer（沙箱内）
+network::mojom::URLLoaderFactory* factory = ...;
+factory->CreateLoaderAndStart(...);  // Mojo 消息 → Browser/Network Service
+
+// 真实网络套接字只存在于 Network Service 进程
+// Renderer 从未接触 socket，只收发序列化后的数据</code></pre>
+
+      <h2 id="5-代价与权衡">5. 代价与权衡</h2>
+
+      <ul>
+        <li><strong>内存</strong>：每个进程有独立的堆、代码镜像（可通过共享只读段缓解）和基础运行时。多进程是 Chrome 内存占用高的主要根源之一。缓解手段：进程复用、<code>--single-process</code>（仅调试）、Renderer 内存压缩与淘汰。</li>
+        <li><strong>通信开销</strong>：所有跨边界交互都要序列化。高频路径（如滚动输入事件、canvas 光栅化）为此做了专门设计：输入事件走高优先级 Mojo 通道，合成器推到 GPU 进程而非 Renderer。</li>
+        <li><strong>启动与调度复杂度</strong>：进程启动有延迟（Renderer 预热池 pre-rendering/pooled renderer 缓解），崩溃恢复、状态同步（如 tab crash → Sad Tab 页）都需要显式处理。</li>
+      </ul>
+
+      <p>反过来，这套架构也带来意外的产品能力：单标签页崩溃不连累全局、任务管理器可以按进程展示每站点内存与 CPU（Site Isolation 的副产品）、以及 <code>chrome://sandbox</code> 能直观验证各进程的沙箱级别。</p>
+
+      <h2 id="6-小结">6. 小结</h2>
+
+      <p>Chromium 多进程架构可以浓缩为三句话：</p>
+
+      <ol>
+        <li><strong>进程是信任边界</strong>：Browser 进程独享特权，处理不可信内容的进程全部沙箱化。</li>
+        <li><strong>Site Isolation 决定进程分配粒度</strong>：不同站点不同进程，本质是对侧信道与渲染漏洞的工程响应。</li>
+        <li><strong>Mojo 让安全边界可审查</strong>：跨进程接口在 mojm 定义中显式枚举，权限模型从"代码习惯"变成"接口契约"。</li>
+      </ol>
+
+      <p>后续可延伸的方向：Renderer 沙箱的具体机制（win32k lockdown、Broker 模式）、Viz 合成器架构、以及 Mojo 服务在进程外的服务化用法。</p>
+    </article>
+  </main>
+</body>
+</html>
