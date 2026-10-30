@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="DeepSeek Harness（dsh）框架整理：DeepSeek 开源的智能体 Harness，一切皆插件的插件优先运行时，架构、会话模型、运行模式与插件生态。">
+  <meta name="note:title" content="DeepSeek Harness（dsh）框架整理">
+  <meta name="note:topic" content="llm-algorithms">
+  <meta name="note:date" content="2026-10-31">
+  <meta name="note:updated" content="2026-10-31">
+  <meta name="note:summary" content="DeepSeek 开源的智能体运行框架 dsh：一切皆插件的 Cordis 架构、可追溯会话模型、四种运行模式与插件生态整理。">
+  <meta name="note:tags" content="deepseek, agent, harness, cordis, 插件化, 编程智能体">
+
+  <title>DeepSeek Harness（dsh）框架整理 | OrangeQi 知识库</title>
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/assets/site.css">
+</head>
+<body class="article-page">
+  <header class="site-header">
+    <a class="brand" href="/" aria-label="OrangeQi 知识库首页"><span class="brand-mark" aria-hidden="true">O</span><span class="brand-name">OrangeQi <span>知识库</span></span></a>
+    <nav class="header-nav" aria-label="主导航"><a href="/">返回笔记库 <span aria-hidden="true">↗</span></a></nav>
+  </header>
+  <main class="note-page">
+    <nav class="note-breadcrumbs" aria-label="面包屑"><a href="/">笔记库</a><span>/</span><span>大模型算法和 Agent 框架</span><span>/</span><span>DeepSeek Harness（dsh）框架整理</span></nav>
+    <header class="note-header">
+      <p class="note-eyebrow">大模型算法和 Agent 框架 / NOTE</p>
+      <h1>DeepSeek Harness（dsh）框架整理</h1>
+      <p class="note-deck">DeepSeek 于 2026 年 8 月开源的智能体 Harness（dsh）：把"让模型真正干活"的运行时也开源了。一切皆插件的 Cordis 架构、全量可追溯的会话模型、四种运行模式与插件生态。</p>
+      <div class="note-byline"><span class="note-date-item">更新 <time datetime="2026-10-31">2026-10-31</time></span><span class="note-date-item">记录 <time datetime="2026-10-31">2026-10-31</time></span></div>
+    </header>
+    <article class="note-content">
+      <h2 id="定位-什么是-harness">定位：什么是 Harness</h2>
+      <p>大模型只会"提出下一步"，而 <strong>Harness 是让模型真正干活的那个运行时</strong>——读你的仓库、执行命令、跟踪会话、展示每一步改动。官方用一条公式概括：<strong>Agent = 模型 + Harness</strong>。模型是智能体的灵魂，Harness 是智能体的身体。</p>
+      <p><strong>DeepSeek Harness</strong>（命令别名 <code>dsh</code>）是 DeepSeek 于 <strong>2026 年 8 月 13 日</strong>以 developer preview 形式开源的官方智能体框架，MIT 许可，主要语言 TypeScript。一句话定位：<strong>DeepSeek 版的 Claude Code</strong>——但和"成品车"Claude Code 不同，dsh 给的是<strong>底盘加一堆可换零件</strong>：模型适配器、工具注册表、甚至"智能体怎么一步步干活"的循环逻辑本身，都是可拔插的插件。开源 12 小时即获 5000 Star，两个月内成为 GitHub 上增长最快的智能体项目之一，npm 包 <code>@deepseek-ai/dsh</code> 迭代极快（截至 2026 年 10 月末，npm 默认版 0.2.1-rc.2，仓库已推进到 0.2.2-alpha 系，均为预发布）。</p>
+      <p>官方圈定的五类用武之地：文档 / 数据 / 幻灯片等日常处理；编码（探索仓库、修 bug、写功能、跑测试）；带引用来源的调研；后台任务与批处理脚本；安装或开发插件。</p>
+
+      <h2 id="架构核心-一切皆插件">架构核心：一切皆插件</h2>
+      <p>dsh 构建在 <strong>Cordis</strong> 插件系统之上（DeepSeek 2022 年开源的项目），架构口号是 <strong>"Everything is a Plugin"</strong>，设计思想见论文《A Programming Paradigm for Spatiotemporal Composability》。Cordis 内核极简，只做三件事：<strong>加载插件、卸载插件、解析依赖</strong>。其余一切能力都是插件——模型连接器、工具定义、技能库、沙箱、记忆存储、UI 层，甚至智能体的主循环逻辑，改配置文件就能换，不用动源码。</p>
+      <p>Cordis 有两个关键性质，也是论文标题里"时空可组合"的含义：</p>
+      <ul>
+        <li><strong>时间可组合（temporal composability）</strong>：插件卸载时，它产生的副作用可以完整回滚，系统状态回到卸载前。</li>
+        <li><strong>空间可组合（spatial composability）</strong>：插件配置变更后，插件间的依赖关系会动态重建，不需要重启整个系统。</li>
+      </ul>
+      <p>仓库采用 pnpm monorepo 组织：<code>packages/</code> 是核心 npm 包（含 Cordis 集成与官方 bundle 清单 <code>@deepseek-ai/dsh-official-bundles</code>），<code>apps/</code> 是 Web UI（官方把 Web UI 作为主要上手路径），另有 Python SDK、<code>native/</code> 原生层、<code>docs/</code>（ADR 架构决策记录、cookbook）与 <code>benchmarks/</code>。工程规范相当严格：ADR 流程、Oxlint/lefthook/jscpd 检查，文档全部中英双语成对维护。插件与运行时的接入点用 <strong>slot / inject（槽位注入）</strong>机制描述，LLM 适配层则有 "twin LLM adapters"、"capability seams" 等 ADR 设计。</p>
+
+      <h2 id="全量可追溯与会话模型">全量可追溯与会话模型</h2>
+      <p>dsh 把<strong>模型看到的每一字节</strong>都记录在 append-only 的会话日志里：系统提示、推理过程、工具调用与结果、子智能体调度、每一次上下文注入。基于同一条事件流提供：</p>
+      <ul>
+        <li><strong>Trajectory 视图</strong>：按来源审查记录，适合合规审计、代码评审、带新人等需要"看清楚智能体干了什么"的场景。</li>
+        <li><strong>resume / fork / 搜索 / 重放</strong>：长任务出问题时回退重试，而不是推倒重来。</li>
+      </ul>
+      <p>会话的两个核心概念：</p>
+      <ul>
+        <li><strong>turn</strong>：你交给它的一个完整任务。</li>
+        <li><strong>step</strong>：它干的一次活——请求一次模型 + 调用一批工具。</li>
+      </ul>
+      <p><strong>人工审批与工具拦截都是挂在 step 前后的钩子</strong>：要不要人工批准才能执行？删文件、联网前拦一道？都是配置项，不是改代码。</p>
+
+      <h2 id="四种运行模式">四种运行模式</h2>
+      <p>四种模式本质上是<strong>四组预先配好的插件组合</strong>：</p>
+      <table>
+        <thead>
+          <tr><th>模式</th><th>定位</th><th>说明</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>标准</td><td>通用日常</td><td>文档、数据、调研等均衡配置</td></tr>
+          <tr><td>代码</td><td>编码任务</td><td>强化仓库探索、修改、测试相关工具链</td></tr>
+          <tr><td>极简</td><td>基准与轻量</td><td>官方跑 DeepSeek-V4-Pro 成绩时使用的档位</td></tr>
+          <tr><td>创造</td><td>插件创作</td><td>Creator mode：通过对话让 dsh 自己写插件、装进运行时</td></tr>
+        </tbody>
+      </table>
+      <p>想确认当前 profile 实际加载了哪些插件：<code>dsh --profile web --dump-config</code>。</p>
+
+      <h2 id="安装与模型配置">安装与模型配置</h2>
+      <ul>
+        <li><strong>桌面安装包</strong>（最省事）：官网 <code>deepseek.com/harness</code> 下载，目前覆盖 macOS（Apple 芯片）与 Windows x64，无需 Node.js。</li>
+        <li><strong>npx 一行启动</strong>（推荐开发者）：<code>npx @deepseek-ai/dsh web</code>，前置 Node.js 22.19+ 或 24 LTS，浏览器打开 <code>127.0.0.1:3080</code>。</li>
+        <li><strong>源码构建</strong>（插件作者）：<code>pnpm install && pnpm run build && pnpm dsh web</code>。</li>
+      </ul>
+      <p>模型配置在 Web UI 的 Settings → Models 填 API Key（默认端点 <code>api.deepseek.com</code>），凭证存于 <code>$DSH_HOME/.credentials.yaml</code>；同时支持 <strong>Anthropic 与 OpenAI 兼容协议</strong>的自定义端点——接哪家模型都行。</p>
+      <p>官方推荐的高性价比组合是 <strong>dsh + DeepSeek-V4.1-Flash</strong>：长时程 Agent 任务大量消耗输入 token（反复读仓库），V4.1-Flash 的 KV Cache 压缩与低定价正好把这块成本打到很低——"开源身体配开源大脑"。注意官方推理价格分峰谷时段，高峰输出 token 单价最高可达低谷的约 4.55 倍，大批量任务前先看时段。</p>
+
+      <h2 id="插件生态与开发">插件生态与开发</h2>
+      <ul>
+        <li><strong>找插件</strong>：在 GitHub 用 <code>dsh-plugin</code> 标签检索社区插件（如 <code>dsh-at-file</code>、<code>dsh-genui</code>），通过 plugin manager 安装 bundle。</li>
+        <li><strong>写插件</strong>：Creator mode 下直接用自然语言让 dsh 写一个插件并挂进运行时。官方示例（写一个悬浮番茄钟）：加载 <code>cordis-plugin-development</code> 技能 → 检查 providers 与 <code>runtimeSlots</code> → 生成 <code>dsh-plugin-*/package.json</code> 与 <code>client.js</code> → 调用 <code>plugin_manager</code> 的 <code>install_bundle</code> → 起一个 shell 验证插件状态。全程约 5 分钟，这正是 dsh 与成品类工具最大的差异点：<strong>它想让你改造它</strong>。</li>
+        <li><strong>插件权限</strong>：插件可以读文件系统、完整会话历史和工作流控制——装第三方插件前先审代码，生产环境要有沙箱隔离。</li>
+      </ul>
+
+      <h2 id="使用提醒">使用提醒</h2>
+      <ul>
+        <li><strong>仍是 developer preview</strong>：官方明确接口可能有破坏性变更，别把生产工作流绑死在某个预览版上，留好回滚方案。</li>
+        <li><strong>隔离运行</strong>：它会执行模型生成的命令，官方要求在隔离环境中运行，并对可访问文件做好备份。</li>
+        <li><strong>平台覆盖</strong>：桌面安装包目前只有 macOS Apple 芯片与 Win x64；Linux / Intel Mac 走 npx web 模式。</li>
+      </ul>
+
+      <h2 id="在开源-agent-版图中的位置">在开源 Agent 版图中的位置</h2>
+      <p>dsh 是"开源模型阵营补齐 Harness 层"的标志性事件：DeepSeek 此前开源了模型权重（V3/V4 系列）与推理效率技术（MLA/DSA），dsh 补上了<strong>模型之外让能力落地的执行层</strong>，与 Claude Code（闭源成品）、OpenAI Codex CLI 等形成对照。它延续了综述笔记里"Agent 能力内化到模型侧"的趋势——官方演示中 dsh 与 V4-Pro 的组合在 agentic coding 基准上达到开源 SOTA，模型与 Harness 由同一家打造、协同优化，这条"模型 + Harness 双开源"路线值得关注。</p>
+
+      <h2 id="参考">参考</h2>
+      <ul>
+        <li>GitHub 仓库：<a href="https://github.com/deepseek-ai/deepseek-harness">deepseek-ai/deepseek-harness</a>（MIT）</li>
+        <li>官方页面：<a href="https://www.deepseek.com/harness/">deepseek.com/harness</a></li>
+        <li>架构论文：<em>A Programming Paradigm for Spatiotemporal Composability</em>（Cordis 设计）</li>
+        <li>社区拆解：腾讯云开发者社区《DeepSeek 把模型的"马具"开源了：拆解 Harness》；程序员鱼皮《DeepSeek Harness 首发实测 + 入门教程》（B 站 BV1VkgK6NEZS）</li>
+      </ul>
+    </article>
+    <div class="note-end"><a href="/">← 返回全部笔记</a><span>持续学习，持续整理。</span></div>
+  </main>
+</body>
+</html>
