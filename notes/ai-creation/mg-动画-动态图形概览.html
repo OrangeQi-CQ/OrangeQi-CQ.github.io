@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="MG 动画（Motion Graphics，动态图形）入门：它是什么、与实拍视频和传统逐帧动画的区别、典型应用场景、核心原理、工具链与 AI 时代的生产方式。">
+  <meta name="note:title" content="MG 动画：动态图形（Motion Graphics）概览">
+  <meta name="note:topic" content="ai-creation">
+  <meta name="note:date" content="2026-10-31">
+  <meta name="note:updated" content="2026-10-31">
+  <meta name="note:summary" content="MG 动画（Motion Graphics，动态图形）入门：定义、与实拍和逐帧动画的区别、典型场景、核心原理、工具链与 AI 时代的生产方式。">
+  <meta name="note:tags" content="motion-graphics, mg动画, after-effects, remotion, lottie, ai视频">
+
+  <title>MG 动画：动态图形（Motion Graphics）概览 | OrangeQi 知识库</title>
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/assets/site.css">
+</head>
+<body class="article-page">
+  <header class="site-header">
+    <a class="brand" href="/" aria-label="OrangeQi 知识库首页"><span class="brand-mark" aria-hidden="true">O</span><span class="brand-name">OrangeQi <span>知识库</span></span></a>
+    <nav class="header-nav" aria-label="主导航"><a href="/">返回笔记库 <span aria-hidden="true">↗</span></a></nav>
+  </header>
+  <main class="note-page">
+    <nav class="note-breadcrumbs" aria-label="面包屑"><a href="/">笔记库</a><span>/</span><span>AI 创作</span><span>/</span><span>MG 动画：动态图形概览</span></nav>
+    <header class="note-header"><p class="note-eyebrow">AI 创作 / NOTE</p><h1>MG 动画：动态图形（Motion Graphics）概览</h1><p class="note-deck">MG 动画是"平面设计 + 运动"的交叉学科：用扁平图形、图标和文字的运动来解释概念。这篇笔记梳理它的定义、边界、典型场景、核心原理和工具链，并补充 AI 时代的新生产方式。</p><div class="note-byline"><span class="note-date-item">更新 <time datetime="2026-10-31">2026-10-31</time></span><span class="note-date-item">记录 <time datetime="2026-10-31">2026-10-31</time></span></div></header>
+    <article class="note-content">
+      <p><strong>MG 动画 = Motion Graphics 动画（动态图形 / 图形动画）</strong>，指用平面设计的视觉语言——扁平图形、图标、文字、色块——加上运动来传达信息的动画形式。它不追求角色的栩栩如生，而是靠位移、缩放、旋转、遮罩和节奏，把抽象概念讲清楚。</p>
+      <p>一句话定位：<strong>实拍记录世界，逐帧动画表演故事，MG 动画解释概念</strong>。它是当前短视频和信息可视化时代产量最大的一类动画。</p>
+
+      <h2 id="与相邻形式的三条边界">与相邻形式的三条边界</h2>
+      <table>
+        <thead>
+          <tr><th scope="col">形式</th><th scope="col">制作方式</th><th scope="col">擅长表达</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>实拍视频</strong></td><td>摄影机记录真实世界</td><td>真实事件、人物、质感</td></tr>
+          <tr><td><strong>MG 动画</strong></td><td>图形元素 + 运动设计，在软件里合成</td><td>数据、流程、抽象概念——实拍拍不出来的东西</td></tr>
+          <tr><td><strong>传统逐帧动画</strong></td><td>一张张手绘连续画面（角色表演）</td><td>叙事、角色、情感</td></tr>
+        </tbody>
+      </table>
+      <p>MG 与传统动画的技术分界在于：<strong>传统动画大多逐帧手绘，MG 大多是"图层级"运动</strong>——设计师画一组静态图形，让它们在时间轴上做变换，不需要一帧帧画。当然两者常被混用：MG 片子里也可以有逐帧小动画（如走路循环）点缀。</p>
+
+      <h2 id="典型应用场景">典型应用场景</h2>
+      <ul>
+        <li><strong>产品与运营</strong>：App 功能介绍视频、产品发布会演示、片头片尾包装。</li>
+        <li><strong>信息传播</strong>：新闻数据动画、科普频道（如 Kurzgesagt 的大部分画面）、知识区UP主的讲解视频。</li>
+        <li><strong>界面动效</strong>：UI 演示、加载动画、Lottie 驱动的 App 内动效——MG 思想在交互层的延伸。</li>
+      </ul>
+
+      <h2 id="核心原理四件事">核心原理四件事</h2>
+      <ol>
+        <li><strong>图形语言</strong>：扁平化、几何化、克制配色。MG 的美术本质是"让图形本身可读"，细节越少，信息越清楚。</li>
+        <li><strong>关键帧与变换</strong>：一切运动都分解为属性随时间的变化——位置、缩放、旋转、不透明度，再叠加遮罩、路径变形。</li>
+        <li><strong>缓动与节奏（Easing &amp; Timing）</strong>：线性运动是机器味，ease-out 的减速、spring 的回弹才有人味；整个镜头组接的节奏感决定成片质量。这是 MG 区分"会动"和"好看"的分水岭。</li>
+        <li><strong>运动图形叙事</strong>：用图形转场串联逻辑——一个圆形滚出画面成为下一个镜头的太阳。图形复用与转场是 MG 的标志性语法。</li>
+      </ol>
+
+      <h2 id="工具链">工具链</h2>
+      <table>
+        <thead>
+          <tr><th scope="col">工具</th><th scope="col">定位</th><th scope="col">说明</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>After Effects</strong></td><td>行业主流</td><td>图层级合成与动画的事实标准，插件生态（Motion Bro、脚本、表达式）最厚</td></tr>
+          <tr><td><strong>Remotion</strong></td><td>程序化视频</td><td>用 React 写视频，帧确定性渲染，适合参数化模板和批量产出（见<a href="/notes/ai-creation/2d-3d-视觉效果图景.html">视觉效果图景笔记</a>）</td></tr>
+          <tr><td><strong>Lottie</strong></td><td>AE → 端内动效</td><td>把 AE 动画导出为 JSON，在网页/App 原生播放，体积小、可交互</td></tr>
+          <tr><td><strong>C4D / Blender</strong></td><td>三维质感 MG</td><td>"3D 风 MG"用三维软件做扁平渲染，C4D + AE 是广告公司经典组合</td></tr>
+          <tr><td><strong>Jitter / Rive / Figma</strong></td><td>轻量与协作</td><td>Rive 做可交互矢量动画（游戏/端内），Figma 补设计与简单动效</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="ai时代的mg生产">AI 时代的 MG 生产</h2>
+      <ul>
+        <li><strong>素材生成</strong>：文生图产出扁平插画风格素材，抠图后进 AE 做图层级运动，是目前最稳的 AI 融合路径。</li>
+        <li><strong>模板化批量</strong>：Remotion 类程序化管线让"改参数出片子"成立，MG 是最适合被模板化的动画品类——因为它的元素和运动都是结构化的。</li>
+        <li><strong>AI 视频的边界</strong>：文生视频（Sora 类模型）擅长真实感和运动纹理，但对精确文字、图标和数据准确性仍不可控——这正是结构化 MG 不可替代的位置。</li>
+        <li><strong>对口型与配音</strong>：TTS + 自动字幕 + 节奏对齐，把讲解类 MG 的产能瓶颈（配音、卡点）基本抹平。</li>
+      </ul>
+
+      <h2 id="学习路径建议">学习路径建议</h2>
+      <ol>
+        <li><strong>先练"运动感"再练软件</strong>：动画十二法则里的挤压拉伸、预备动作、缓动对 MG 同样适用；用任何工具临摹 10 条喜欢的片头，比看完所有教程有用。</li>
+        <li><strong>After Effects 起步</strong>：跟完一个完整项目教程（如 MG 机车/人物动画），掌握形状图层、遮罩、表达式基础；表达式（JS 方言）对程序员极友好。</li>
+        <li><strong>补设计短板</strong>：版式、配色、字体——MG 上限由设计决定，不由软件决定。</li>
+        <li><strong>接代码管线</strong>：会编程的话，用 Remotion 把重复型 MG 模板化，用 Lottie 把成果送进端内，形成"设计软件 + 代码"的双通道产能。</li>
+      </ol>
+      <p>与知识库的关系：本文是<a href="/notes/ai-creation/2d-3d-视觉效果图景.html">2D/3D 视觉效果图景</a>中"程序化视频"方向的垂直展开；MG 的代码侧与 Remotion 一脉相承，美术资产侧则与 Blender 的 2D/渲染能力相邻。</p>
+    </article>
+  </main>
+</body>
+</html>
