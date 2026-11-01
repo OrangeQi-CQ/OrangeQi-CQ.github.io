@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="从 WireGuard 隧道、Cryptokey Routing、AllowedIPs 到 Linux 转发与 NAT，解释设备如何通过 VPS 访问互联网。">
+  <meta name="note:title" content="WireGuard 如何让 VPS 成为网络出口：隧道、路由与 NAT">
+  <meta name="note:topic" content="os-applications">
+  <meta name="note:date" content="">
+  <meta name="note:updated" content="2026-11-01">
+  <meta name="note:summary" content="解释 WireGuard 如何封装并加密 IP 数据包、AllowedIPs 如何参与路由，以及 VPS 如何通过转发和 NAT 成为互联网出口。">
+  <meta name="note:tags" content="WireGuard, VPN, 网络, VPS, 路由, NAT">
+  <title>WireGuard 如何让 VPS 成为网络出口：隧道、路由与 NAT | OrangeQi 知识库</title>
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/assets/site.css">
+</head>
+<body class="article-page">
+  <header class="site-header">
+    <a class="brand" href="/" aria-label="OrangeQi 知识库首页"><span class="brand-mark" aria-hidden="true">O</span><span class="brand-name">OrangeQi <span>知识库</span></span></a>
+    <nav class="header-nav" aria-label="主导航"><a href="/">返回笔记库 <span aria-hidden="true">↗</span></a></nav>
+  </header>
+  <main class="note-page">
+    <nav class="note-breadcrumbs" aria-label="面包屑"><a href="/">笔记库</a><span>/</span><span>操作系统应用</span><span>/</span><span>WireGuard 如何让 VPS 成为网络出口</span></nav>
+    <header class="note-header">
+      <p class="note-eyebrow">操作系统应用 / NOTE</p>
+      <h1>WireGuard 如何让 VPS 成为网络出口：隧道、路由与 NAT</h1>
+      <p class="note-deck">从设备发出的 IP 包开始，拆解 WireGuard 隧道、VPS 转发与公网出口之间的关系。</p>
+      <div class="note-byline"><span class="note-date-item">更新 <time datetime="2026-11-01">2026-11-01</time></span><span class="note-date-item">记录 未注明</span></div>
+    </header>
+    <article class="note-content">
+      <p>WireGuard 不会替设备“创造”新的互联网连接。它在设备和 VPS 之间建立一条经过认证、加密的三层 IP 隧道；设备把选中的 IP 流量送进隧道，VPS 解密后按普通 IP 路由转发到互联网。网站看到的公网来源地址，通常就是 VPS 的出口地址。</p>
+
+      <h2 id="先看数据流">先看数据流</h2>
+      <p>假设 WireGuard 隧道网段为 <code>10.8.0.0/24</code>，设备地址是 <code>10.8.0.2</code>，VPS 的公网地址是 <code>198.51.100.10</code>，客户端要访问网站地址 <code>203.0.113.20</code>。地址仅作文档示例。</p>
+      <pre class="language-text"><code>设备上的原始 IP 包
+  源地址 10.8.0.2  ->  目标地址 203.0.113.20
+             |
+             | 路由选择 WireGuard 虚拟接口 wg0
+             v
+外层 UDP 包
+  源地址 本地网络出口地址:临时端口
+  目标地址 198.51.100.10:51820
+  UDP 负载：经过认证加密的原始 IP 包
+             |
+             v
+VPS 解密 -> Linux 路由/转发 -> SNAT 或 MASQUERADE -> 互联网
+             ^                                      |
+             |                                      v
+设备解密并交付回包 &lt;- VPS 将回包匹配连接状态并送入 wg0</code></pre>
+      <ol>
+        <li>应用生成普通的 TCP、UDP 或其他 IP 流量。操作系统查询路由表，判断目标地址应走本地网卡还是 WireGuard 接口。</li>
+        <li>流量命中隧道路由后，WireGuard 根据密钥和对端配置对内层 IP 包加密、认证，再将其作为 UDP 数据报发往 VPS 的公网端点。</li>
+        <li>VPS 的 WireGuard 对端验证并解密数据，将合法的内层包交给虚拟接口；Linux 再根据路由表决定如何转发。</li>
+        <li>常见的 VPS 出口配置会在外网接口上做源地址转换（SNAT/MASQUERADE），把隧道私网源地址改成 VPS 的公网地址。目标服务器据此回包。</li>
+        <li>VPS 的连接跟踪状态负责反向还原地址并把回包送回隧道；设备验证、解密后，把原始回包交给应用。</li>
+      </ol>
+
+      <h2 id="wireguard-负责哪一层">WireGuard 负责哪一层</h2>
+      <p>WireGuard 是三层网络隧道：它处理 IP 包，不负责把浏览器请求改造成 HTTP 代理请求。它为系统提供类似 <code>wg0</code> 的虚拟网络接口，并通过 UDP 承载经过加密认证的 IP 包。WireGuard 协议使用 Noise_IK 握手建立会话密钥，数据包采用 ChaCha20-Poly1305 认证加密；具体协议细节可见<a class="external external-link" href="https://www.wireguard.com/protocol/" rel="noopener">官方协议说明</a>与<a class="external external-link" href="https://www.wireguard.com/papers/wireguard.pdf" rel="noopener">技术白皮书</a>。</p>
+      <p>双方通过公私钥识别对端：私钥留在本机，公钥配置到对端。握手使用长期身份密钥和临时密钥协商后续数据密钥，数据传输不把原始 IP 包明文放在公网 UDP 负载中。WireGuard 本身不负责用户注册、密钥分发或下发完整网络策略，这些工作由配置管理、操作系统和部署工具承担。</p>
+
+      <h2 id="allowedips-既是路由也是访问约束">AllowedIPs：既是路由也是访问约束</h2>
+      <p>WireGuard 的 <code>AllowedIPs</code> 不只是“允许访问哪些地址”。它是 Cryptokey Routing 的组成部分：发送时用目标地址选择对应 peer；接收时用解密后包的源地址检查该 peer 是否有权代表这个地址。它和操作系统路由表相关，但不能简单地把配置项等同于系统路由表的全部行为。不同客户端前端可能还会负责安装路由、DNS 和防泄漏策略。</p>
+      <p>典型配置的含义可以这样理解：</p>
+      <pre class="language-ini"><code>; 客户端的服务端 peer 配置片段：全 IPv4 和 IPv6 默认流量都指向此 peer
+AllowedIPs = 0.0.0.0/0, ::/0
+
+; 服务端的客户端 peer 配置片段：此 peer 代表客户端隧道地址
+AllowedIPs = 10.8.0.2/32</code></pre>
+      <p>客户端的 <code>0.0.0.0/0</code> 表示所有 IPv4 目标地址都匹配该 peer；<code>::/0</code> 表示所有 IPv6 目标地址都匹配。若只配置了具体网段，就属于分流场景，其他目标仍按系统的其他路由处理。服务端给客户端 peer 配置 <code>10.8.0.2/32</code>，则表示该 peer 的隧道源地址应为这个单独的 IPv4 地址。WireGuard 官方的<a class="external external-link" href="https://www.wireguard.com/" rel="noopener">概念说明</a>也明确描述了 AllowedIPs 的发送路由与接收源地址校验两种作用。</p>
+      <p>全隧道还需要避免路由递归：发往 VPS WireGuard 公网端点的外层 UDP 包本身必须继续通过物理网卡发出，不能又被送进尚未建立的隧道。Linux 的 <code>wg-quick</code> 等工具会按平台机制处理相关策略路由；手工配置时则必须检查实际路由表和规则。</p>
+
+      <h2 id="vps-如何成为互联网出口">VPS 如何成为互联网出口</h2>
+      <p>WireGuard 解密只让内层包到达 VPS，不会自动替 Linux 转发。通常还需满足三个条件：</p>
+      <ol>
+        <li><strong>启用转发：</strong>内核允许在隧道接口和公网网卡之间转发数据包。Linux 的 <code>net.ipv4.ip_forward</code> 控制 IPv4 转发；IPv6 另有对应配置和防火墙规则。</li>
+        <li><strong>路由与防火墙允许：</strong>VPS 能从公网网卡将目标流量发出，防火墙的转发链也允许该隧道子网通过。只开放 WireGuard UDP 监听端口，不等于允许隧道流量转发。</li>
+        <li><strong>配置回程可达性：</strong>互联网回包必须能回到隧道客户端。最常见的做法是在 VPS 出公网时做 SNAT/MASQUERADE，由连接跟踪保存并反向转换地址；另一种方式是让上游网络具备到隧道地址段的明确路由。</li>
+      </ol>
+      <p>因此，“握手成功”只说明设备能和 WireGuard 对端交换协议消息，不足以证明 VPS 的转发、防火墙、NAT、DNS 和客户端默认路由都正确。Linux 的 <code>ip_forward</code> 内核说明见<a class="external external-link" href="https://docs.kernel.org/networking/ip-sysctl.html" rel="noopener">IP Sysctl 文档</a>；NAT 的源地址转换和 masquerade 语义见<a class="external external-link" href="https://www.netfilter.org/projects/nftables/manpage.html" rel="noopener">nftables 手册</a>。</p>
+
+      <h2 id="加密边界与可见信息">加密边界与可见信息</h2>
+      <ul>
+        <li><strong>本地网络到 VPS：</strong>本地运营商或 Wi-Fi 网络通常仍能看到 VPS 的公网 IP、UDP 端口、连接时间和流量特征；WireGuard 加密保护的是隧道内部 IP 包内容，并不隐藏隧道端点。</li>
+        <li><strong>VPS 到目标站点：</strong>WireGuard 的加密在 VPS 处终止。VPS 作为转发节点能处理解密后的目标 IP 和端口；若上层应用没有自己的加密，内容也可能被沿途读取。</li>
+        <li><strong>HTTPS：</strong>HTTPS 独立保护设备与网站之间的应用数据内容，但不等同于 WireGuard，也不代表所有连接元数据都不可见。DNS 查询是否经隧道、使用哪个解析器，是另一项路由和解析配置。</li>
+        <li><strong>目标网站：</strong>经 VPS 转发时，网站通常看到 VPS 的公网出口地址。VPS 因而是信任边界的一部分，不等同于匿名网络。</li>
+      </ul>
+
+      <h2 id="全隧道与分流">全隧道与分流</h2>
+      <table>
+        <thead><tr><th scope="col">模式</th><th scope="col">路由含义</th><th scope="col">需要特别确认</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">全隧道</th><td>默认 IPv4/IPv6 流量经 WireGuard 送往 VPS。</td><td>IPv4 与 IPv6 默认路由、DNS 路径、VPS 转发和 NAT，以及隧道端点仍能经物理网络访问。</td></tr>
+          <tr><th scope="row">分流</th><td>只把指定地址段或内网网段交给 WireGuard，其余流量沿本地默认路由。</td><td>目标网段是否完整；DNS 是否使用预期解析器；本地直连是设计选择还是配置遗漏。</td></tr>
+        </tbody>
+      </table>
+      <p>若只配置 IPv4 默认路由而设备仍有可用 IPv6，部分连接可能直接从本地 IPv6 出口发出。同样，WireGuard 已连通并不自动意味着 DNS 请求会走隧道。应分别核对路由、地址族和 DNS，而不是仅凭客户端的连接状态判断。</p>
+
+      <h2 id="常见故障定位">常见故障定位</h2>
+      <table>
+        <thead><tr><th scope="col">现象</th><th scope="col">优先检查</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">没有最新握手</th><td>VPS 公网地址和 UDP 端口、安全组与主机防火墙、密钥和 peer 配置、客户端所在网络是否允许到达该 UDP 端点。</td></tr>
+          <tr><th scope="row">有握手但无法访问公网</th><td>客户端的 AllowedIPs 和路由、服务端 peer 的客户端隧道地址、Linux 转发开关、FORWARD 规则、NAT 及回程路由。</td></tr>
+          <tr><th scope="row">网站仍看到本地出口地址</th><td>客户端默认路由是否覆盖该流量、IPv6 是否另走本地出口、应用或系统是否使用了不同的代理/路由策略。</td></tr>
+          <tr><th scope="row">能访问 IP 但域名失败</th><td>DNS 服务器配置与路由、防火墙的 DNS 规则、客户端是否应用了隧道 DNS。</td></tr>
+          <tr><th scope="row">连接建立但部分大流量请求卡住</th><td>隧道和底层链路的 MTU、路径 MTU 探测及相关 ICMP 是否被过滤。封装会增加外层头部，留给内层包的空间比物理链路 MTU 更小。</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="核心结论">核心结论</h2>
+      <p>WireGuard 负责“认证对端、加密封装 IP 包、把包交给正确 peer”；客户端和系统路由决定“哪些流量进入隧道”；VPS 的 Linux 转发、防火墙、路由和 NAT 决定“解密后的包能否从公网出去，并让回包找到原客户端”。把这几层分开理解，就能解释为什么握手成功、流量进隧道和成功访问公网是三个不同的状态。</p>
+    </article>
+    <div class="note-end"><a href="/">← 返回全部笔记</a><span>持续学习，持续整理。</span></div>
+  </main>
+</body>
+</html>

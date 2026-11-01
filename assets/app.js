@@ -63,7 +63,7 @@ function renderNotes() {
     const tags = note.tags.slice(0, 2).map((tag) => `<span class="note-tag">#${escapeHTML(tag)}</span>`).join('');
     return `<article class="note-row">
       <span class="note-number">${String(index + 1).padStart(2, '0')}</span>
-      <div class="note-main"><a class="note-title" href="/${note.path.split('/').map(encodeURIComponent).join('/')}">${escapeHTML(note.title)}</a>
+      <div class="note-main"><a class="note-title" href="/notes/${note.path.split('/').map(encodeURIComponent).join('/')}">${escapeHTML(note.title)}</a>
       <p class="note-summary">${escapeHTML(note.summary)}</p>
       <div class="note-meta"><span class="note-category">${escapeHTML(topic?.label || '')}</span>${tags}</div></div>
       <div class="note-dates"><time datetime="${escapeHTML(note.updated || '')}"><span>更新</span> ${escapeHTML(note.updated || '未知')}</time>${note.date ? `<time datetime="${escapeHTML(note.date)}"><span>记录</span> ${escapeHTML(note.date)}</time>` : '<span><span>记录</span> 未注明</span>'}</div>
@@ -125,7 +125,7 @@ async function init() {
     const featured = index.notes.find((note) => note.featured) || index.notes[0];
     if (featured) {
       const card = $('[data-featured-note]');
-      card.href = `/${featured.path.split('/').map(encodeURIComponent).join('/')}`;
+      card.href = `/notes/${featured.path.split('/').map(encodeURIComponent).join('/')}`;
       $('[data-featured-title]').textContent = featured.title;
       $('[data-featured-summary]').textContent = featured.summary;
       $('[data-featured-category]').textContent = topicFor(featured.topic)?.label || '';
