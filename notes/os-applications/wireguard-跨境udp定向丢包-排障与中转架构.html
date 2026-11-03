@@ -1,0 +1,314 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="一次 WireGuard 跨境连不上的完整排障记录：如何分段定位、如何用用户态握手探针和 UDP 计数器证明丢包位置，以及用国内节点做 UDP 中继的最终架构。">
+  <meta name="note:title" content="跨境 UDP 定向丢包排障实录：从 WireGuard 握手失败到国内节点中继">
+  <meta name="note:topic" content="os-applications">
+  <meta name="note:date" content="2026-11-03">
+  <meta name="note:updated" content="2026-11-03">
+  <meta name="note:summary" content="记录一次 WireGuard 全部设备突然连不上的排查：用两端抓包、UDP 计数器、用户态握手探针和 STUN 反射逐步证明「跨境链路对源端口 51820 的 UDP 定向丢包」，最终用国内节点做 DNAT/SNAT 中继恢复，并整理出可复用的排查顺序与踩坑清单。">
+  <meta name="note:tags" content="WireGuard, UDP, 排障, iptables, NAT, tcpdump, 跨境网络, VPS">
+  <title>跨境 UDP 定向丢包排障实录：从 WireGuard 握手失败到国内节点中继 | OrangeQi 知识库</title>
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/assets/site.css">
+</head>
+<body class="article-page">
+  <header class="site-header">
+    <a class="brand" href="/" aria-label="OrangeQi 知识库首页"><span class="brand-mark" aria-hidden="true">O</span><span class="brand-name">OrangeQi <span>知识库</span></span></a>
+    <nav class="header-nav" aria-label="主导航"><a href="/">返回笔记库 <span aria-hidden="true">↗</span></a></nav>
+  </header>
+  <main class="note-page">
+    <nav class="note-breadcrumbs" aria-label="面包屑"><a href="/">笔记库</a><span>/</span><span>操作系统应用</span><span>/</span><span>跨境 UDP 定向丢包排障实录</span></nav>
+    <header class="note-header">
+      <p class="note-eyebrow">操作系统应用 / NOTE</p>
+      <h1>跨境 UDP 定向丢包排障实录：从 WireGuard 握手失败到国内节点中继</h1>
+      <p class="note-deck">电脑和手机同时连不上，服务器配置看起来全对。真正的问题不在任何一台机器的配置文件里，而在两段网络之间。</p>
+      <div class="note-byline"><span class="note-date-item">更新 <time datetime="2026-11-03">2026-11-03</time></span><span class="note-date-item">记录 <time datetime="2026-11-03">2026-11-03</time></span></div>
+    </header>
+    <article class="note-content">
+      <p>这是一次「原本能用、突然全断」的排查记录。海外节点上的 WireGuard 服务端一切正常、密钥匹配、端口在听、防火墙放行，客户端配置也没改过，但电脑和手机就是连不上：客户端显示「已发送几百字节、收到 0 字节」，服务端看不到新的握手。</p>
+      <p>最后定位到的原因很反直觉：<strong>跨境链路上，WireGuard 默认端口 51820 作为「源端口」的 UDP 包被定向丢弃了</strong>。换个监听端口就活了。为了让它稳定可用，又加了一台国内节点做 UDP 中继，形成「国内中转 → 海外出口」的两跳结构。</p>
+      <p>下面把方法、工具、命令和踩过的坑都整理出来。文中地址、密钥一律使用文档示例值，实际配置保存在本机。</p>
+
+      <h2 id="结论先行当前架构">结论先行：当前架构</h2>
+      <pre class="language-text"><code>        ┌──────────────┐   UDP 51820（国内段，通畅）
+        │  客户端 PC    │──────────────────────────┐
+        │ 10.66.66.2   │                          │
+        └──────────────┘                          v
+                                          ┌───────────────────┐
+        ┌──────────────┐   UDP 51820       │  国内中转节点      │
+        │  iPhone      │──────────────────▶│  122.51.x.x       │
+        │ 10.66.66.3   │                   │  DNAT + SNAT      │
+        └──────────────┘                   └─────────┬─────────┘
+                                                     │ UDP 51821（跨境段，必须换掉 51820）
+                                                     v
+                                           ┌───────────────────┐
+                                           │  海外出口节点      │
+                                           │  43.160.x.x       │
+                                           │  wg0 10.66.66.1   │
+                                           │  ListenPort 51821 │
+                                           └─────────┬─────────┘
+                                                     │ iptables MASQUERADE
+                                                     v
+                                                  互联网</code></pre>
+      <table>
+        <thead><tr><th scope="col">环节</th><th scope="col">角色</th><th scope="col">关键配置</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">客户端</th><td>建立隧道，全量接管（<code>0.0.0.0/0</code>）</td><td><code>Endpoint = 122.51.x.x:51820</code>、<code>PersistentKeepalive = 25</code></td></tr>
+          <tr><th scope="row">国内中转</th><td>纯 UDP 转发，不做加解密</td><td><code>PREROUTING DNAT</code> + <code>POSTROUTING SNAT</code>，<code>ip_forward=1</code></td></tr>
+          <tr><th scope="row">海外出口</th><td>WireGuard 服务端 + 互联网出口</td><td><code>ListenPort = 51821</code>、<code>ip_forward</code>、<code>MASQUERADE</code></td></tr>
+        </tbody>
+      </table>
+      <p>中继不改加密边界：从客户端到海外节点始终是端到端加密的 WireGuard 报文，国内节点只做 IP 层的地址转换，看不到隧道内容。海外节点按<b>密钥</b>识别 peer，因此所有客户端看起来都来自中转节点的地址，也不影响识别。</p>
+
+      <h2 id="现象三个看起来都对">现象：三个「看起来都对」</h2>
+      <p>故障刚出现时，有三处信息同时指向「配置没问题」，很容易误判：</p>
+      <ol>
+        <li><strong>客户端显示隧道已建立。</strong>WireGuard 界面是绿色的，<code>wg show</code> 能看到接口和 peer，只有 <code>transfer</code> 是 <code>0 B received</code>。</li>
+        <li><strong>服务端配置齐全。</strong><code>wg show</code> 显示监听端口、两个 peer、<code>AllowedIPs</code> 都对；<code>ip_forward=1</code>，<code>MASQUERADE</code> 规则也在。</li>
+        <li><strong>服务器完全可达。</strong><code>ping</code> 通（60 ms 左右）、SSH 通、甚至历史上一天前还有成功的握手记录和上 GB 的流量计数。</li>
+        </ol>
+      <p>真正有用的信号只有一个：<b><code>sent</code> 在涨、<code>received</code> 恒为 0，服务端没有新的握手时间</b>。这说明客户端在发、服务端没收到或回了但客户端收不到。接下来所有的动作，都是为了把「哪一段断了」变成可观测的事实。</p>
+
+      <h2 id="先把问题切成四段">先把问题切成四段</h2>
+      <p>链路一长，最忌讳「在一台机器上空转」。把整条路径拆成四段，每一段都要拿到独立证据：</p>
+      <pre class="language-text"><code>[客户端] --A--&gt; [国内链路] --B--&gt; [中转节点] --C--&gt; [海外节点] --D--&gt; 回程</code></pre>
+      <table>
+        <thead><tr><th scope="col">段</th><th scope="col">要回答的问题</th><th scope="col">证据来源</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">A</th><td>客户端到底有没有把包发出去？发给了谁？</td><td>客户端 <code>wg show</code> 的 <code>transfer</code>、<code>endpoint</code></td></tr>
+          <tr><th scope="row">B</th><td>包有没有到达中转/海外节点的网卡？</td><td>对端 <code>tcpdump -i eth0 'udp and port 51820'</code></td></tr>
+          <tr><th scope="row">C</th><td>对端有没有回包？回给了哪个地址端口？</td><td>同一份抓包的 Out 方向、<code>wg show</code> 的 <code>latest handshake</code></td></tr>
+          <tr><th scope="row">D</th><td>回包有没有回到客户端？</td><td>客户端 <code>netstat -s -p UDP</code> 的收包计数、本机抓包</td></tr>
+        </tbody>
+      </table>
+      <p>关键点：<b>「对端抓到了」不等于「客户端收得到」</b>。两端必须同时抓、按时间戳对，才能判断丢在哪一侧。</p>
+
+      <h2 id="工具与命令速查">工具与命令速查</h2>
+      <p>下面这些是本轮真正用到的，按用途分组。Windows 与 Linux 命令混排，注意区分。</p>
+      <table>
+        <thead><tr><th scope="col">用途</th><th scope="col">命令</th><th scope="col">看什么</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">看隧道与 peer</th><td><code>wg show</code> / <code>wg show all dump</code></td><td><code>latest handshake</code>、<code>transfer</code>、<code>endpoint</code>、PSK 是否为 <code>(none)</code></td></tr>
+          <tr><th scope="row">看监听</th><td><code>ss -lunp | grep 51820</code></td><td>端口是否真的在 <code>0.0.0.0</code> 上监听、有没有进程抢占</td></tr>
+          <tr><th scope="row">看转发与 NAT</th><td><code>sysctl net.ipv4.ip_forward</code>、<code>iptables -S</code>、<code>iptables -t nat -S</code></td><td>转发开关、FORWARD 策略（可能是 DROP）、NAT 规则顺序</td></tr>
+          <tr><th scope="row">看 nft 规则</th><td><code>nft list ruleset</code>、<code>nft -a list ruleset</code></td><td><code>iptables -S</code> 看不到的链（云厂商安全组件常写在这里）</td></tr>
+          <tr><th scope="row">看连接跟踪</th><td><code>conntrack -L</code>（需安装 <code>conntrack</code>）</td><td><code>[UNREPLIED]</code> 表示只出去、没回来</td></tr>
+          <tr><th scope="row">抓包</th><td><code>tcpdump -n -i eth0 -c 20 'udp and port 51820'</code></td><td>方向（In/Out）、源目地址端口、包长</td></tr>
+          <tr><th scope="row">UDP 栈计数</th><td><code>netstat -s -p UDP</code></td><td><code>Datagrams Received</code> 是否增长——判断包有没有进本机协议栈</td></tr>
+          <tr><th scope="row">端口可达性</th><td><code>Test-NetConnection host -Port 22</code>（Windows）</td><td>TCP 是否通，排除「整条链路不通」</td></tr>
+          <tr><th scope="row">SSH 跳板</th><td><code>ssh -J user@jump user@target</code></td><td>验证「国内 → 海外」的 TCP 通道是否正常</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="手法一用户态握手探针">手法一：不用管理员权限的 WireGuard 握手探针</h2>
+      <p>最难受的局面是：想验证「服务端会不会回我的包」，但装隧道要管理员权限、要建虚拟网卡、还可能把整机网络搞断。这时可以只做一件事——<b>用脚本发一个合法的握手初始化包，看对方回不回</b>。</p>
+      <p>WireGuard 的握手消息是固定 148 字节的 Noise_IKpsk2 初始化包。只要能拿到客户端静态私钥和服务端公钥，就可以用 Python 手搓一个，从普通 UDP socket 发出去，<b>不需要 root、不创建网卡、不影响系统路由</b>：</p>
+      <pre class="language-text"><code>04 00 00 00  sender_index(4)
+ephemeral(32)              ← 临时公钥
+encrypted_static(48)       ← 32 字节静态公钥 + 16 字节 tag
+encrypted_timestamp(28)    ← 12 字节 TAI64N + 16 字节 tag
+mac1(16)  mac2(16)
+──────────────────────────
+合计 148 字节</code></pre>
+      <p>判定标准非常明确：</p>
+      <ul>
+        <li>收到 <b>92 字节、type=2</b> 的报文 → 服务端接受了你的密钥并回了握手响应，路由、密钥、peer 全部正确。</li>
+        <li>收到 <b>type=3</b> → 服务端在负载下要求 cookie，链路也是双向通的。</li>
+        <li>什么都没有 → 要么包没到，要么对方没回，要么回程断了（配合两端抓包区分）。</li>
+      </ul>
+      <p>这个探针把「客户端软件、路由表、DNS、虚拟网卡」这些变量全部排除掉，只测最纯粹的「UDP 双向可达 + 密钥被接受」，是本次定位里性价比最高的一步。</p>
+
+      <h3 id="握手实现的两个坑">握手实现的两个坑</h3>
+      <p>自己实现时踩了两个坑，都不是「大概对」就能过的，密码学部分必须逐字节一致：</p>
+      <ol>
+        <li><strong>初始 hash 里要混入 IDENTIFIER。</strong>不是简单的 <code>HASH(CONSTRUCTION)</code>，而是
+          <code>InitialChainKey = HASH("Noise_IKpsk2_25519_ChaChaPoly_BLAKE2s")</code>，
+          <code>InitialHash = HASH(InitialChainKey ‖ "WireGuard v1 zx2c4 Jason@zx2c4.com")</code>，
+          之后才是 <code>HASH(InitialHash ‖ 对端静态公钥)</code>。少这一步，包结构看着完全正常，对方静默丢弃。</li>
+        <li><strong>MAC1 是「带密钥的 BLAKE2s-128」，不是 HMAC。</strong>即 <code>BLAKE2s(key = HASH("mac1----" ‖ 对端公钥), data = 前 116 字节, digest_size = 16)</code>。
+          用 HMAC 算出来是 32 字节，报文长度会变成 164 字节，一眼就能看出来不对。</li>
+      </ol>
+      <p>调试技巧：先验证 <code>MAC1</code> 能不能对上——让服务端主动发起握手（把临时 peer 的 endpoint 指向本地监听端口，然后从服务端 <code>ping</code> 对端隧道地址触发），抓下它发出的真实 148 字节包，用自己实现的 MAC 函数去复算，能对上就说明哈希与 MAC 实现正确，剩下的问题只可能在 AEAD/KDF 链上。</p>
+
+      <h2 id="手法二udp-计数器">手法二：用 UDP 栈计数器判断「包到没到本机」</h2>
+      <p>「我没收到」可能是应用层没收到，也可能是包根本没到。Windows 上最省事的判据是 <code>netstat -s -p UDP</code> 的两个数字：</p>
+      <pre class="language-bash"><code>netstat -s -p UDP | findstr /C:"Datagrams Received" /C:"No Ports" /C:"Receive Errors"
+
+# 采样 → 发一个探针 → 再采样</code></pre>
+      <table>
+        <thead><tr><th scope="col">观察结果</th><th scope="col">结论</th></tr></thead>
+        <tbody>
+          <tr><th scope="row"><code>Datagrams Received</code> 不增长</th><td>包<b>没有</b>进本机协议栈 → 丢在网卡之前（运营商、云安全组、路由器）</td></tr>
+          <tr><th scope="row">增长，但应用没收到，<code>No Ports</code> 也涨</th><td>包到了，但目的端口没有 socket 接收 → NAT 映射问题或端口对不上</td></tr>
+          <tr><th scope="row">正常增长且应用收到</th><td>这一段链路没问题，往上游查</td></tr>
+        </tbody>
+      </table>
+      <p>一定要用「同一个网络里其他服务的 UDP 回包」做对照实验（公共 DNS、STUN、NTP 都行）。如果别人的 UDP 回包能收到、只有目标 IP 收不到，问题就被锁定到「特定对端」，而不是「本机防火墙」。</p>
+
+      <h2 id="手法三stun-查出口地址">手法三：STUN 查 UDP 出口地址</h2>
+      <p>有一种容易被忽略的故障：服务器 TCP 出口是 A 地址，UDP 出口却是 B 地址（NAT 非对称）。这时客户端会看到「回包来自一个我没发过的地址」，直接被丢掉。</p>
+      <p>用任何一个 STUN 服务器就能验证——回包里带 <code>XOR-MAPPED-ADDRESS</code>，就是<b>对方看到的你的 UDP 源地址</b>：</p>
+      <pre class="language-python"><code>import os, socket, struct
+
+pkt = struct.pack("&gt;HHI", 1, 0, 0x2112A442) + os.urandom(12)   # Binding Request
+s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+s.settimeout(3)
+s.sendto(pkt, ("stun.example.net", 3478))
+data, addr = s.recvfrom(2048)      # 解析 XOR-MAPPED-ADDRESS 即可</code></pre>
+      <p>本次实测：服务器 UDP 反射地址与 <code>curl ifconfig.me</code> 得到的 TCP 出口地址<b>完全一致</b>，排除了 NAT 非对称这条支线。</p>
+
+      <h2 id="手法四两端同时抓包">手法四：两端同时抓包 + conntrack 看回程</h2>
+      <p>确认了「发得出去、对端收得到、对端也回了」之后，剩下的唯一问题就是回程。这时两端的抓包必须同时开，并且要能看出<b>方向</b>：</p>
+      <pre class="language-bash"><code># 服务端：只抓 51820，看 In / Out 两个方向
+sudo tcpdump -n -i eth0 -c 20 'udp and port 51820'
+
+# 中转节点：同时看两侧（客户端方向 + 海外方向）
+sudo tcpdump -n -i eth0 -c 30 'udp and (host &lt;客户端公网IP&gt; or host &lt;海外节点IP&gt;)'</code></pre>
+      <p>再配上 <code>conntrack -L</code>，状态字段会直接告诉你答案：</p>
+      <pre class="language-text"><code>udp 17 23 src=客户端 dst=中转 sport=9685 dport=51820
+       [UNREPLIED]                     ← 关键：只出去，没回来
+       src=海外 dst=中转 sport=51821 dport=40064</code></pre>
+      <p><code>[UNREPLIED]</code> 加上「海外节点抓包里明明有 Out 方向的 92 字节响应」，就说明<b>回包在到达中转节点网卡之前就被丢了</b>，不是 iptables 的问题——这一步能省掉大量在规则上空转的时间。</p>
+
+      <h2 id="定位定向丢包">定位：跨境链路对「源端口 51820」的定向丢包</h2>
+      <p>真正把原因钉死的是一组对照实验：让海外节点用<b>不同源端口</b>向中转节点的同一个端口发 UDP，观察哪些能到达。</p>
+      <table>
+        <thead><tr><th scope="col">源端口</th><th scope="col">目的端口</th><th scope="col">是否到达</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">38093 / 54345 / 60032（随机高位）</th><td>40003 / 40025 / 40095</td><td>✅ 到达</td></tr>
+          <tr><th scope="row">51821</th><td>40025</td><td>✅ 到达</td></tr>
+          <tr><th scope="row">40001</th><td>40025</td><td>✅ 到达</td></tr>
+          <tr><th scope="row">443</th><td>40025</td><td>✅ 到达</td></tr>
+          <tr><th scope="row"><strong>51820</strong></th><td>40025</td><td>❌ <strong>一个都没到</strong></td></tr>
+        </tbody>
+      </table>
+      <p>同一对 IP、同一段时间、同一个目的端口，只换源端口——只有 51820 被丢。结论很明确：<b>这条跨境链路上有规则专门针对 WireGuard 默认端口的 UDP</b>，与客户端、密钥、系统配置都无关。这也解释了为什么在转发节点上怎么改 iptables 都不生效——包根本没到网卡。</p>
+      <p>顺带一个方法论：WireGuard 的回包<b>源端口</b>永远等于服务端监听端口。所以只要换掉服务端监听端口，回包源端口就一起变了；客户端侧不需要任何改动（客户端连的仍是中转节点的 51820）。</p>
+
+      <h2 id="中继方案">中继方案：国内节点做纯 UDP 转发</h2>
+      <p>端口换掉后，海外节点的回包能穿过跨境链路了，但客户端仍然不能直连海外节点（客户端所在的运营商网络对该地址的 UDP 同样不可靠）。所以加一台国内节点做中转，客户端连国内（国内段 UDP 通畅），国内节点再转发到海外。</p>
+      <p>这里是<b>内核态</b>转发，不是 userspace 代理，性能损耗极小：</p>
+      <pre class="language-bash"><code># 1) 开启转发
+sysctl -w net.ipv4.ip_forward=1
+
+# 2) 目的地址转换：客户端打到本机 51820 的包，转给海外节点的 51821
+iptables -t nat -A PREROUTING -p udp --dport 51820 \
+  -j DNAT --to-destination &lt;海外节点IP&gt;:51821
+
+# 3) 源地址转换：把源地址改成中转节点自己，这样回包会回到这里
+#    注意把源端口收敛到固定区间，方便安全组按端口段放行
+iptables -t nat -A POSTROUTING -p udp -d &lt;海外节点IP&gt; --dport 51821 \
+  -j SNAT --to-source 10.0.0.15:40000-40099
+
+# 4) FORWARD 默认策略常常是 DROP（装了 Docker 的机器尤其如此），必须显式放行
+iptables -I FORWARD 1 -p udp -d &lt;海外节点IP&gt; --dport 51821 -j ACCEPT
+iptables -I FORWARD 1 -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT</code></pre>
+
+      <h3 id="为什么snat端口要收敛">为什么 SNAT 端口一定要收敛</h3>
+      <p>这是本次最隐蔽的一个坑。云安全组是<b>按端口</b>匹配的：</p>
+      <ul>
+        <li>用 <code>MASQUERADE</code> 时，源端口由内核从临时端口里分配，每次会话都可能不同（<code>9685</code>、<code>40064</code>、<code>40095</code>…）。</li>
+        <li>海外节点回包的目的端口就是这个临时端口，而安全组只放行了少数几个端口 → 回包在<b>到达网卡之前</b>就被丢弃，<code>tcpdump</code> 连影子都看不到。</li>
+        <li>逐个端口加白是不可维护的。正确做法是把 SNAT 源端口收敛到一个固定区间（如 <code>40000-40099</code>），然后在安全组里按<b>源 IP</b>放行全部 UDP 端口，或放行这一小段端口。</li>
+      </ul>
+      <p>判断依据就是 <code>conntrack</code> 里那条 <code>[UNREPLIED]</code>：它说明 <code>POSTROUTING</code> 已经把包发出去了（规则命中），但反向包从未回来。</p>
+
+      <h3 id="持久化">持久化：重启后规则不能丢</h3>
+      <p>iptables 规则默认不落盘。用 systemd 的 oneshot 服务在启动时重新应用，比依赖 <code>iptables-persistent</code> 更直观，也便于把「幂等删除再添加」写进脚本：</p>
+      <pre class="language-ini"><code>[Unit]
+Description=WireGuard UDP relay (51820 -&gt; overseas:51821)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/sbin/wg-relay.sh
+
+[Install]
+WantedBy=multi-user.target</code></pre>
+      <pre class="language-bash"><code>systemctl daemon-reload
+systemctl enable --now wg-relay.service
+echo 'net.ipv4.ip_forward=1' &gt; /etc/sysctl.d/99-wg-relay.conf</code></pre>
+      <p>脚本要写成幂等的：先 <code>-D</code> 删除同名规则（不存在就 <code>|| true</code>），再 <code>-A</code> 添加，避免重复执行堆出一串重复规则。</p>
+
+      <h2 id="最终配置">最终配置片段</h2>
+      <p>客户端只需要把 <code>Endpoint</code> 指向中转节点，其余（密钥、隧道地址、MTU、keepalive）保持不变：</p>
+      <pre class="language-ini"><code>[Interface]
+PrivateKey = &lt;客户端私钥&gt;
+Address = 10.66.66.2/24
+DNS = 1.1.1.1
+MTU = 1380
+
+[Peer]
+PublicKey = &lt;海外节点公钥&gt;
+Endpoint = 122.51.x.x:51820      ; 连中转节点，不是直连海外
+AllowedIPs = 0.0.0.0/0
+PersistentKeepalive = 25</code></pre>
+      <p>海外节点的 <code>/etc/wireguard/wg0.conf</code> 只改监听端口，其他不动：</p>
+      <pre class="language-ini"><code>[Interface]
+Address = 10.66.66.1/24
+ListenPort = 51821              ; 原 51820 在这条链路上会被针对性丢弃
+PrivateKey = &lt;服务端私钥&gt;
+PostUp = iptables -A FORWARD -i wg0 -j ACCEPT; iptables -A FORWARD -o wg0 -j ACCEPT; iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
+PostDown = iptables -D FORWARD -i wg0 -j ACCEPT; iptables -D FORWARD -o wg0 -j ACCEPT; iptables -t nat -D POSTROUTING -o eth0 -j MASQUERADE
+
+[Peer]
+PublicKey = &lt;客户端公钥&gt;
+AllowedIPs = 10.66.66.2/32
+
+[Peer]
+PublicKey = &lt;手机公钥&gt;
+AllowedIPs = 10.66.66.3/32</code></pre>
+      <p>安全组需要三条（云控制台）：客户端到中转的 <code>UDP/51820</code>；中转访问海外的 <code>UDP/51821</code>；以及中转侧<b>按源 IP</b> 放行来自海外节点的 UDP（源 <code>&lt;海外节点IP&gt;/32</code>，端口全部或 <code>40000-40099</code>）。</p>
+
+      <h2 id="踩坑清单">踩坑清单</h2>
+      <p>这次排查里，一半时间花在了下面这些坑上。按「症状 → 原因 → 处理」记录，供下次直接查表。</p>
+      <table>
+        <thead><tr><th scope="col">症状</th><th scope="col">原因</th><th scope="col">处理</th></tr></thead>
+        <tbody>
+          <tr><th scope="row"><code>wg setconf</code> 报 <code>AllowedIP is not in the correct format: 10.66.66.2/32[Peer]</code></th><td>配置文件少了一个换行，两个 <code>[Peer]</code> 段粘在一起。启动时没报错是因为文件在接口启动<b>之后</b>才被改坏，跑了几天一直没重启</td><td>补换行，并用临时接口验证：<code>ip link add wgtest type wireguard; wg-quick strip wg0 | wg setconf wgtest /dev/stdin</code>。这类错误平时完全无感，<b>重启即断</b></td></tr>
+          <tr><th scope="row">WireGuard 界面显示已连接，但整条链路从没通过</th><td>隧道服务其实没在运行（服务被卸载或崩溃），只看 GUI 会误判</td><td>交叉验证四件事：<code>Get-Service WireGuardTunnel*</code>、<code>ipconfig</code> 里有没有虚拟网卡、路由表有没有隧道网段、<code>wg show</code> 有没有接口</td></tr>
+          <tr><th scope="row">客户端 <code>0 B received</code>，服务端也没握手</th><td>客户端发出的握手包到不了服务端，或者回包回不来</td><td>两端同时抓包 + <code>conntrack</code> 看 <code>[UNREPLIED]</code>；再用不同源端口/不同主机做对照，区分「IP 被拦」还是「端口被拦」</td></tr>
+          <tr><th scope="row">中转上 <code>tcpdump</code> 完全看不到回包</th><td>云安全组按端口匹配，SNAT 后的目的端口不在放行范围，包在网卡之前就被丢</td><td>把 SNAT 端口收敛成固定区间，或按源 IP 放行 UDP 全部端口</td></tr>
+          <tr><th scope="row">改了 iptables 规则仍然不通</th><td>真正生效的规则在 <code>nft</code> 里（云厂商安全组件常写 <code>*-FIREWALL-INPUT</code>），<code>iptables -S</code> 看不到</td><td><code>nft list ruleset</code> 完整看一遍；同时确认 <code>FORWARD</code> 策略可能是 <code>DROP</code>（装过 Docker 的机器默认如此）</td></tr>
+          <tr><th scope="row"><code>ssh -i key</code> 报 <code>Bad permissions ... This private key will be ignored</code></th><td>Windows 上私钥文件对 <code>Everyone</code> 可读，OpenSSH 拒绝使用</td><td><code>icacls key /inheritance:r /grant:r "$env:USERNAME:(F)"</code>；临时排查可复制到私有目录再收紧权限</td></tr>
+          <tr><th scope="row">远程执行脚本「莫名其妙没跑完」</th><td><code>pkill -f udp_echo_server</code> 把执行它的那条 ssh 命令行也匹配进去了，直接把自己的 shell 杀掉</td><td>用不会自匹配的写法：<code>pkill -f "udp_echo[_]server"</code></td></tr>
+          <tr><th scope="row">PowerShell 里给 ssh 传多行脚本，远端报各种语法错误</th><td>双引号、<code>$</code>、<code>&gt;</code> 在 PowerShell → ssh → 远端 shell 三层里被反复解释</td><td>不要在命令行里拼脚本：把脚本写到本地文件，通过 <code>cat file | ssh host "sudo bash -s"</code> 送进去；密码认证的场景用 paramiko 之类的库直接开 channel</td></tr>
+          <tr><th scope="row"><code>curl -4 ifconfig.me</code> 结果看起来是 IPv6</th><td>当前网络 IPv6 优先，不少站点直接返回 IPv6 地址</td><td>显式用 <code>curl -4</code> 或查询 IPv4 专用接口；排查出口地址时别被地址族误导</td></tr>
+          <tr><th scope="row">全隧道一开，整机断网</th><td><code>AllowedIPs = 0.0.0.0/0</code> 把默认路由交给隧道，隧道半通时所有流量都进黑洞</td><td>先准备好回滚命令（<code>wireguard.exe /uninstalltunnelservice &lt;名字&gt;</code>），并保留一个能直连的 SSH 通道</td></tr>
+          <tr><th scope="row">能 ping 通隧道地址，网页却打不开</th><td>多一跳后路径 MTU 更小，大包被丢</td><td>把客户端 <code>MTU</code> 从 1380 降到 1280 再试</td></tr>
+          <tr><th scope="row">手机端无法复用「SSH 隧道」方案</th><td>iOS 没有能跑 SSH 代理的通用客户端</td><td>移动端只能连真实的 TCP/UDP 端口，所以要解决的是服务端端口可达性，而不是在客户端做花样</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="验证清单">验证清单</h2>
+      <p>改完之后按顺序验收，每一步都要有明确预期，不要跳步：</p>
+      <ol>
+        <li><b>握手</b>：<code>wg show</code> 出现 <code>latest handshake: 几秒前</code>，且 <code>received</code> 不再是 0。</li>
+        <li><b>隧道内连通</b>：<code>ping 10.66.66.1</code> 通（延迟含两跳，200–400 ms 属正常）。</li>
+        <li><b>出口正确</b>：<code>curl -4 ifconfig.me</code> 返回海外节点地址。</li>
+        <li><b>DNS</b>：随便解析一个域名，确认走的是隧道内的解析器而不是本地 ISP。</li>
+        <li><b>大流量</b>：下载一个大文件，确认 MTU 没问题（不卡在半路）。</li>
+        <li><b>重启验证</b>：重启中转节点，确认 <code>wg-relay.service</code> 自动把规则装回去。</li>
+      </ol>
+
+      <h2 id="可复用的排查顺序">可复用的排查顺序</h2>
+      <p>把这次的经验压缩成一条通用路径，遇到「隧道连不上」可以直接照着走：</p>
+      <ol>
+        <li><b>先确认隧道真的在跑</b>：虚拟网卡、服务、<code>wg show</code>、路由表，四者对照，别看界面颜色。</li>
+        <li><b>再确认服务端在听</b>：<code>ss -lunp</code>，以及密钥是否匹配（客户端私钥推导出的公钥要等于服务端配置的 peer）。</li>
+        <li><b>拿到双向证据</b>：两端同时 <code>tcpdump</code>，看 In 有没有、Out 有没有。</li>
+        <li><b>Out 有、客户端收不到</b>：查 <code>conntrack</code> 的 <code>[UNREPLIED]</code>，查云安全组的<b>回程端口</b>，查 NAT 源端口是否在放行范围。</li>
+        <li><b>In 就没有</b>：查安全组、主机防火墙、<code>nft</code>，再用「换源端口 / 换目的主机」做对照，判断是按 IP 拦还是按端口拦。</li>
+        <li><b>确认是链路问题后</b>：换端口、换 IP、加中转，而不是继续在配置里找原因。</li>
+      </ol>
+      <p>最后一点体会：WireGuard 的「握手成功」只证明两端能交换协议消息，不证明转发、NAT、DNS、MTU 都正确；反过来，「握手失败」也不一定是配置错了——本次从头到尾配置文件都是对的，错的是包在网络上走的路。</p>
+    </article>
+    <div class="note-end"><a href="/">← 返回全部笔记</a><span>持续学习，持续整理。</span></div>
+  </main>
+</body>
+</html>
